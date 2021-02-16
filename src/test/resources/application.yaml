@@ -1,0 +1,28 @@
+ucloud:
+  token: babbaba
+  secret: thereisnospoon
+  endpoints:
+    jobs: https://test.test.test/api/jobs/control/
+
+app:
+  security:
+    incoming:
+      publicKey: |
+        -----BEGIN PUBLIC KEY-----
+        TEST
+        -----END PUBLIC KEY-----
+      tokenPrefix: "Bearer "
+      headerString: Authorization
+    outgoing:
+      privateKey: |
+        -----BEGIN PRIVATE KEY-----
+        THISISNTEVENMYFINALKEY
+        -----END PRIVATE KEY-----
+openstack:
+  username: testtest
+  password: testtest
+  project:
+    name: testtest
+    id: testtest
+  endpoints:
+    auth: https://test.test.test.test:5000/v3/
