@@ -1,0 +1,6 @@
+#Insane amounts of logging
+#logging:
+#  level:
+#    org:
+#      springframework: DEBUG
+
