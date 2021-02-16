@@ -1,0 +1,36 @@
+name: build-push-image
+
+on:
+  push:
+    branches: 
+      - main
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.CR_USERNAME }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: fetch repository
+        uses: actions/checkout@master
+      - name: Set GITHUB_SHA_SHORT
+        run: echo "GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
+
+      - name: Build and push image
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          tags: |
+            ghcr.io/aau-claaudia/openstackgateway:${{ env.GITHUB_SHA_SHORT }}
+  staging:
+    runs-on: ubuntu-latest
+    needs: app
+    environment:
+      name: Stage
+      url: http://130.226.98.162
+    steps:  
