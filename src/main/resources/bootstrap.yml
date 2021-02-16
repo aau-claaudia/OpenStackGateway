@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: openstackgateway
+  cloud:
+    config:
+      name: ${spring.application.name}
+      uri: http://localhost:8888 #, http://??:8888, http://?:8888
