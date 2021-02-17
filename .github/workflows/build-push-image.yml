@@ -6,41 +6,10 @@ on:
       - main
       - infrastructure
 
-x-deploysteps: &deploysteps
-  steps:
-    - name: fetch repository
-      uses: actions/checkout@master
-
-    - name: Set GITHUB_SHA_SHORT
-      run: echo "GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
-    
-    - name: Setup ssh agent
-      run: |
-        ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-        ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
-    
-    - name: Play Ansible Playbook
-      uses: arillso/action.playbook@master
-      with:
-        playbook: infrastructure/ansible/playbook.yml
-        inventory: infrastructure/ansible/inventory-${{ github.job_id }}
-        private_key: ${{ secrets.SSH_PRIVATE_KEY }} 
-        galaxy_file: infrastructure/ansible/requirements.yml
-        ssh_common_args: "\"-oUserKnownHostsFile=infrastructure/known_hosts\""
-    
-    - name: Make a temporary directory
-      run: echo "SERVICE_DIRECTORY=$(ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} mktemp -d)" >> $GITHUB_ENV
-    
-    - name: Copy service definition
-      run: scp -o UserKnownHostsFile=infrastructure/known_hosts -r infrastructure/service azureuser@${{ env.HOSTNAME }}:${{ env.SERVICE_DIRECTORY }}
-    
-    - name: Deploy new service definition
-      run: |
-        ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
-          sudo docker swarm init || true
-        ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
-          SITE_HOST=${{ env.HOSTNAME }} OSG_SHA=${{ env.GITHUB_SHA_SHORT }} SPRING_PROFILE=${{ github.job_id }} \
-          sudo -E docker stack deploy --prune -c ${{ env.SERVICE_DIRECTORY }}/service/stack.yml osg
+# At the moment, the environments test and prod are somewhat a copy of each others
+# github actions does not support yaml anchors but does have something they call composite steps:
+# https://docs.github.com/en/actions/creating-actions/about-actions#composite-run-steps-actions
+# which we need to take a look at in the future
 
 jobs:
   app:
@@ -64,6 +33,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/aau-claaudia/openstackgateway:${{ env.GITHUB_SHA_SHORT }}
+
   test:
     runs-on: ubuntu-latest
     needs: app
@@ -73,8 +43,40 @@ jobs:
     env:
       SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       HOSTNAME: openstackgateway-test.germanywestcentral.cloudapp.azure.com
-    <<: *deploysteps
+    steps:
+      - name: fetch repository
+        uses: actions/checkout@master
 
+      - name: Set GITHUB_SHA_SHORT
+        run: echo "GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
+      
+      - name: Setup ssh agent
+        run: |
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
+      
+      - name: Play Ansible Playbook
+        uses: arillso/action.playbook@master
+        with:
+          playbook: infrastructure/ansible/playbook.yml
+          inventory: infrastructure/ansible/inventory-${{ github.job_id }}
+          private_key: ${{ secrets.SSH_PRIVATE_KEY }} 
+          galaxy_file: infrastructure/ansible/requirements.yml
+          ssh_common_args: "\"-oUserKnownHostsFile=infrastructure/known_hosts\""
+      
+      - name: Make a temporary directory
+        run: echo "SERVICE_DIRECTORY=$(ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} mktemp -d)" >> $GITHUB_ENV
+      
+      - name: Copy service definition
+        run: scp -o UserKnownHostsFile=infrastructure/known_hosts -r infrastructure/service azureuser@${{ env.HOSTNAME }}:${{ env.SERVICE_DIRECTORY }}
+      
+      - name: Deploy new service definition
+        run: |
+          ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
+            sudo docker swarm init || true
+          ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
+            SITE_HOST=${{ env.HOSTNAME }} OSG_SHA=${{ env.GITHUB_SHA_SHORT }} SPRING_PROFILE=${{ github.job_id }} \
+            sudo -E docker stack deploy --prune -c ${{ env.SERVICE_DIRECTORY }}/service/stack.yml osg
   prod:
     runs-on: ubuntu-latest
     needs: app
@@ -84,4 +86,37 @@ jobs:
     env:
       SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       HOSTNAME: openstackgateway.germanywestcentral.cloudapp.azure.com
-    <<: *deploysteps
+    steps:
+      - name: fetch repository
+        uses: actions/checkout@master
+
+      - name: Set GITHUB_SHA_SHORT
+        run: echo "GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
+      
+      - name: Setup ssh agent
+        run: |
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
+      
+      - name: Play Ansible Playbook
+        uses: arillso/action.playbook@master
+        with:
+          playbook: infrastructure/ansible/playbook.yml
+          inventory: infrastructure/ansible/inventory-${{ github.job_id }}
+          private_key: ${{ secrets.SSH_PRIVATE_KEY }} 
+          galaxy_file: infrastructure/ansible/requirements.yml
+          ssh_common_args: "\"-oUserKnownHostsFile=infrastructure/known_hosts\""
+      
+      - name: Make a temporary directory
+        run: echo "SERVICE_DIRECTORY=$(ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} mktemp -d)" >> $GITHUB_ENV
+      
+      - name: Copy service definition
+        run: scp -o UserKnownHostsFile=infrastructure/known_hosts -r infrastructure/service azureuser@${{ env.HOSTNAME }}:${{ env.SERVICE_DIRECTORY }}
+      
+      - name: Deploy new service definition
+        run: |
+          ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
+            sudo docker swarm init || true
+          ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
+            SITE_HOST=${{ env.HOSTNAME }} OSG_SHA=${{ env.GITHUB_SHA_SHORT }} SPRING_PROFILE=${{ github.job_id }} \
+            sudo -E docker stack deploy --prune -c ${{ env.SERVICE_DIRECTORY }}/service/stack.yml osg
