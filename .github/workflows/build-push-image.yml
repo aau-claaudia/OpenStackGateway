@@ -36,25 +36,35 @@ jobs:
       url: https://openstackgateway-test.germanywestcentral.cloudapp.azure.com
     env:
       SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+      HOSTNAME: openstackgateway-test.germanywestcentral.cloudapp.azure.com
     steps:
       - name: fetch repository
         uses: actions/checkout@master
+
       - name: Set GITHUB_SHA_SHORT
         run: echo "GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
+      
+      - name: Setup ssh agent
+        run: |
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
+      
       - name: Play Ansible Playbook
         uses: arillso/action.playbook@master
         with:
           playbook: infrastructure/ansible/playbook.yml
           inventory: infrastructure/ansible/inventory-test
-          private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          private_key: ${{ secrets.SSH_PRIVATE_KEY }} 
           galaxy_file: infrastructure/ansible/requirements.yml
           ssh_common_args: "\"-oUserKnownHostsFile=infrastructure/known_hosts\""
-      # quick and dirty image update, we should manage a complete service spec and deploy it
-      # - name: update service spec
-      #   run: |
-      #     ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-      #     ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
-      #     ssh 130.226.98.55 \
-      #       -o UserKnownHostsFile=known_hosts \
-      #       -p443 -lubuntu \
-      #       docker service update dirtyci --image ghcr.io/aau-claaudia/dirtyci:${{ env.GITHUB_SHA_SHORT }}
+      
+      - name: Make a temporary directory
+        run: echo "SERVICE_DIRECTORY=$(ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} mktemp -d)" >> $GITHUB_ENV
+      
+      - name: Copy service definition
+        run: scp -lazureuser -o UserKnownHostsFile=infrastructure/known_hosts -r infrastructure/service ${{ env.HOSTNAME }}:${{ env.SERVICE_DIRECTORY }}
+      
+      - name: Deploy new service definition
+        run: |
+          ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} sudo docker swarm init || true
+          ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} sudo docker stack deploy --prune -c ${{ env.SERVICE_DIRECTORY }}/stack.yml
