@@ -69,5 +69,5 @@ jobs:
           ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
             sudo docker swarm init || true
           ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
-            SITE_HOST=${{ env.HOSTNAME }} OSG_SHA=${{ env.GITHUB_SHA_SHORT }} SPRING_PROFILE=${{ github.action }} \
-            sudo docker stack deploy --prune -c ${{ env.SERVICE_DIRECTORY }}/service/stack.yml osg
+            SITE_HOST=${{ env.HOSTNAME }} OSG_SHA=${{ env.GITHUB_SHA_SHORT }} SPRING_PROFILE=${{ github.job_id }} \
+            sudo -E docker stack deploy --prune -c ${{ env.SERVICE_DIRECTORY }}/service/stack.yml osg
