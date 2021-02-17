@@ -66,5 +66,8 @@ jobs:
       
       - name: Deploy new service definition
         run: |
-          ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} sudo docker swarm init || true
-          ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} sudo docker stack deploy --prune -c ${{ env.SERVICE_DIRECTORY }}/service/stack.yml osg
+          ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
+            sudo docker swarm init || true
+          ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
+            SITE_HOST=${{ env.HOSTNAME }} OSG_SHA=${{ env.GITHUB_SHA_SHORT }} SPRING_PROFILE=${{ environment.name }} \
+            sudo docker stack deploy --prune -c ${{ env.SERVICE_DIRECTORY }}/service/stack.yml osg
