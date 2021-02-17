@@ -62,7 +62,7 @@ jobs:
         run: echo "SERVICE_DIRECTORY=$(ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} mktemp -d)" >> $GITHUB_ENV
       
       - name: Copy service definition
-        run: scp -lazureuser -o UserKnownHostsFile=infrastructure/known_hosts -r infrastructure/service ${{ env.HOSTNAME }}:${{ env.SERVICE_DIRECTORY }}
+        run: scp -o UserKnownHostsFile=infrastructure/known_hosts -r infrastructure/service ethereum@${{ env.HOSTNAME }}:${{ env.SERVICE_DIRECTORY }}
       
       - name: Deploy new service definition
         run: |
