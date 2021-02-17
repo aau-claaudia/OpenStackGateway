@@ -24,7 +24,7 @@ class MyJsonTests {
         val job = Job("JobId123", null, null, null, JobSpecification(), null, null)
 
         assertThat(json!!.write(job)).hasJsonPathStringValue("@.id")
-        assertThat(json!!.write(job)).extractingJsonPathStringValue("@.id")
+        assertThat(json.write(job)).extractingJsonPathStringValue("@.id")
             .isEqualTo("JobId123")
     }
 
