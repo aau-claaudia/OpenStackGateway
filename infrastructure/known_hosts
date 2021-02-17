@@ -1,2 +1,5 @@
 # openstackgateway.germanywestcentral.cloudapp.azure.com:22 SSH-2.0-OpenSSH_7.6p1 Ubuntu-4ubuntu0.3
 openstackgateway.germanywestcentral.cloudapp.azure.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE+v6+gNXCAQhiOSW0pyuLP0X8y8H9cPRa/Mll328t48
+
+# openstackgateway-test.germanywestcentral.cloudapp.azure.com:22 SSH-2.0-OpenSSH_7.6p1 Ubuntu-4ubuntu0.3
+openstackgateway-test.germanywestcentral.cloudapp.azure.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMnFduztq8G4RgsbdvKR5BW+WxZkQHSuE+HyGthip5nH

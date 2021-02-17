@@ -45,7 +45,7 @@ jobs:
         uses: arillso/action.playbook@master
         with:
           playbook: infrastructure/ansible/playbook.yml
-          inventory: infrastructure/ansible/inventory
+          inventory: infrastructure/ansible/inventory-test
           private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           galaxy_file: infrastructure/ansible/requirements.yml
           ssh_common_args: "\"-oUserKnownHostsFile=infrastructure/known_hosts\""

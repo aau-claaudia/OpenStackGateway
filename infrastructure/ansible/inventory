@@ -1,5 +1,1 @@
-[prod]
 openstackgateway.germanywestcentral.cloudapp.azure.com ansible_user=azureuser ansible_become=true
-
-[test]
-openstackgateway-test.germanywestcentral.cloudapp.azure.com ansible_user=azureuser ansible_become=true
