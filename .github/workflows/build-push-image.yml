@@ -4,6 +4,7 @@ on:
   push:
     branches: 
       - main
+      - infrastructure
 
 jobs:
   app:
@@ -27,3 +28,33 @@ jobs:
           push: true
           tags: |
             ghcr.io/aau-claaudia/openstackgateway:${{ env.GITHUB_SHA_SHORT }}
+  test:
+    runs-on: ubuntu-latest
+    needs: app
+    environment:
+      name: test
+      url: https://openstackgateway-test.germanywestcentral.cloudapp.azure.com
+    env:
+      SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+    steps:
+      - name: fetch repository
+        uses: actions/checkout@master
+      - name: Set GITHUB_SHA_SHORT
+        run: echo "GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
+      - name: Play Ansible Playbook
+        uses: arillso/action.playbook@master
+        with:
+          playbook: infrastructure/ansible/playbook.yml
+          inventory: infrastructure/ansible/inventory
+          private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          galaxy_file: infrastructure/ansible/requirements.yml
+          ssh_common_args: "\"-oUserKnownHostsFile=infrastructure/known_hosts\""
+      # quick and dirty image update, we should manage a complete service spec and deploy it
+      # - name: update service spec
+      #   run: |
+      #     ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+      #     ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
+      #     ssh 130.226.98.55 \
+      #       -o UserKnownHostsFile=known_hosts \
+      #       -p443 -lubuntu \
+      #       docker service update dirtyci --image ghcr.io/aau-claaudia/dirtyci:${{ env.GITHUB_SHA_SHORT }}
