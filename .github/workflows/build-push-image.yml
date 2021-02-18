@@ -59,7 +59,7 @@ jobs:
         uses: arillso/action.playbook@master
         with:
           playbook: infrastructure/ansible/playbook.yml
-          inventory: infrastructure/ansible/inventory-${{ github.job_id }}
+          inventory: infrastructure/ansible/inventory-${{ github.job }}
           private_key: ${{ secrets.SSH_PRIVATE_KEY }} 
           galaxy_file: infrastructure/ansible/requirements.yml
           ssh_common_args: "\"-oUserKnownHostsFile=infrastructure/known_hosts\""
@@ -75,7 +75,7 @@ jobs:
           ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
             sudo docker swarm init || true
           ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
-            SITE_HOST=${{ env.HOSTNAME }} OSG_SHA=${{ env.GITHUB_SHA_SHORT }} SPRING_PROFILE=${{ github.job_id }} \
+            SITE_HOST=${{ env.HOSTNAME }} OSG_SHA=${{ env.GITHUB_SHA_SHORT }} SPRING_PROFILE=${{ github.job }} \
             sudo -E docker stack deploy --prune -c ${{ env.SERVICE_DIRECTORY }}/service/stack.yml osg
   prod:
     runs-on: ubuntu-latest
@@ -102,7 +102,7 @@ jobs:
         uses: arillso/action.playbook@master
         with:
           playbook: infrastructure/ansible/playbook.yml
-          inventory: infrastructure/ansible/inventory-${{ github.job_id }}
+          inventory: infrastructure/ansible/inventory-${{ github.job }}
           private_key: ${{ secrets.SSH_PRIVATE_KEY }} 
           galaxy_file: infrastructure/ansible/requirements.yml
           ssh_common_args: "\"-oUserKnownHostsFile=infrastructure/known_hosts\""
@@ -118,5 +118,5 @@ jobs:
           ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
             sudo docker swarm init || true
           ssh -o UserKnownHostsFile=infrastructure/known_hosts -lazureuser ${{ env.HOSTNAME }} \
-            SITE_HOST=${{ env.HOSTNAME }} OSG_SHA=${{ env.GITHUB_SHA_SHORT }} SPRING_PROFILE=${{ github.job_id }} \
+            SITE_HOST=${{ env.HOSTNAME }} OSG_SHA=${{ env.GITHUB_SHA_SHORT }} SPRING_PROFILE=${{ github.job }} \
             sudo -E docker stack deploy --prune -c ${{ env.SERVICE_DIRECTORY }}/service/stack.yml osg
