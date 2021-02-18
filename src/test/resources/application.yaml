@@ -3,6 +3,7 @@ ucloud:
   secret: thereisnospoon
   endpoints:
     jobs: https://test.test.test/api/jobs/control/
+  stackPrefix: ucloud
 
 app:
   security:
