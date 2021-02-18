@@ -49,6 +49,10 @@ class OpenStackService(private val config: OpenStackProperties) {
         }
     }
 
+    private fun prefixStackName(ucloudJobId: String): String {
+        return "${config.stackPrefix}${ucloudJobId}"
+    }
+
     fun test(): String {
         val os = getClient()
 
@@ -93,7 +97,7 @@ class OpenStackService(private val config: OpenStackProperties) {
     }
 
     fun getStack(name: String): Stack? {
-        return getClient().heat().stacks().getStackByName(name)
+        return getClient().heat().stacks().getStackByName(prefixStackName(name))
     }
 
     fun createStack(name: String, template: String, parameters: MutableMap<String, String>): Stack? {
@@ -104,19 +108,20 @@ class OpenStackService(private val config: OpenStackProperties) {
         val build = Builders.stack()
             .template(template)
             .parameters(parameters)
-            .name(name)
+            .name(prefixStackName(name))
             .timeoutMins(60)
             .build()
 
         client.heat().stacks().create(build)
         //The stack returned by create only has id and href
-        return getStack(name)
+        //But I guess this only return a 200
+        return getStack(prefixStackName(name))
     }
 
     fun deleteStack(stackIdentity: String) {
         val client = getClient()
 
-        val stackByName = client.heat().stacks().getStackByName(stackIdentity)
+        val stackByName = client.heat().stacks().getStackByName(prefixStackName(stackIdentity))
         if (stackByName != null) {
             logger.info("Deleting stack: ${stackByName.name}")
             val delete = client.heat().stacks().delete(stackByName.name, stackByName.id)
@@ -162,7 +167,7 @@ class OpenStackService(private val config: OpenStackProperties) {
     fun deattachVolumeToInstance(instance: Server, volume: Volume) {
 
         // FIXME Disse fejl skal vel boble ud og fanges et andet sted?
-        // Det giver vist ikke helt mening at smide httpstatus beskeder inde i servicen
+        // Det giver vist ikke helt mening at smide httpstatus beskeder inde i servicen?
         val volumeAttachment: VolumeAttachment = volume.attachments.find { it.serverId == instance.id } ?:
             throw ResponseStatusException(HttpStatus.NOT_FOUND, "Volume not found")
         getClient().compute().servers().detachVolume(instance.id, volumeAttachment.attachmentId)

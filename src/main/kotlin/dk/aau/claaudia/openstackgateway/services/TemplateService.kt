@@ -54,7 +54,6 @@ public class TemplateService(
     // TODO move these util functions somewhere else. Consider an extension function on heat Template??
     fun extractParameters(template: Template): Map<String, Map<String, String>> {
         val t: JsonTemplate = mapper.readValue(template.templateJson, JsonTemplate::class.java)
-        logger.info("template parameters: ", t.parameters)
 
         return t.parameters
     }
