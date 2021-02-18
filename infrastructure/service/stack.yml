@@ -20,10 +20,10 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE}
 
   configserver:
-    image: ghcr.io/aau-claaudia/configserver:fb85a8
+    image: ghcr.io/aau-claaudia/configserver:05f1a3
     secrets:
       - source: config_privatekey
-        target: /opt/openjdk-15/.ssh/id_rsa
+        target: /root/.ssh/id_rsa
 
 volumes:
   # caddy_data is used for caddy to store its lets encrypt certificates
