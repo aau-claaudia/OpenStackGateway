@@ -39,6 +39,10 @@ class TemplateServiceTest(@Autowired val templateService: TemplateService) {
                     "type" to "string",
                     "default" to "Cirros"
                 ),
+                "username" to mapOf(
+                    "type" to "string",
+                    "default" to "ucloud"
+                ),
             )
 
             assertThat(templateParameters).isEqualTo(expectedParameters)
