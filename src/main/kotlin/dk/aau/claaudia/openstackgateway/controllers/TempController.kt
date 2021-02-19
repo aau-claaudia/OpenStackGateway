@@ -22,7 +22,7 @@ class TempController(
 
     @PostMapping("/")
     @ResponseStatus(HttpStatus.OK)
-    fun createJobs(@RequestBody request: TempJobRequest) {
+    fun createJob(@RequestBody request: TempJobRequest) {
         logger.info("Received job create request, $request")
         //FIXME do some input validation
         if (request != null) {

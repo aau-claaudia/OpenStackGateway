@@ -30,8 +30,6 @@ class ProviderController(
         logger.info("Received job create request, $request")
         for (job in request.items) {
             if (job.id != null) {
-                logger.info("Job had no id, $job")
-
                 // Build parameters for template
                 val templateVars = mutableMapOf<String, String>()
 
@@ -46,22 +44,33 @@ class ProviderController(
                 // Subject to change
                 // Verify parameters are as expected. Extract params from template and compare with provided params.
                 // TODO Can this be verified somewhere else? We need required template params
-                val requiredParameters = templateParameters.filter{ (_, parameter) -> !parameter.containsKey("default")}.map { it.key }
+                val requiredParameters = templateParameters.filter { (_, parameter) -> !parameter.containsKey("default") }.map { it.key }
                 val missingParameters = requiredParameters.filter { it -> it !in templateVars.keys }
                 if (missingParameters.isNotEmpty()) {
                     throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing parameters: $missingParameters")
                 }
 
                 openstackService.createStack(job.id, testTemplate.templateJson, templateVars)
+            } else {
+                logger.warn("Job had no id, $job")
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing ID on job.")
             }
         }
     }
 
-    @DeleteMapping("/")
+    @DeleteMapping("/delete/{jobId}")
     @ResponseStatus(HttpStatus.OK)
-    fun deleteJobs(@RequestBody request: BulkRequest<Job>) {
-        logger.info("Received job delete request, $request")
-        //Her hiver vi hvad vi vil ud fra requesten og kaster efter openstack. WINWIN
+    fun deleteJobs(@PathVariable jobId: String) {
+        logger.info("Received job delete request, ID=$jobId")
+
+        if (jobId == null || jobId.isEmpty()) {
+            logger.warn("Delete request had no jobId!")
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing ID on delete request.")
+        }
+
+        // TODO: Before calling deleteStack, is it required to extract some metadata for the stack (running time + other)?
+
+        openstackService.deleteStack(jobId)
     }
 
     @PostMapping("/extend")
