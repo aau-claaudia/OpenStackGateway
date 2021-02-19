@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.springframework.context.annotation.Primary
-import org.springframework.stereotype.Component
 
 @Configuration
 class ObjectmapperConfig {
