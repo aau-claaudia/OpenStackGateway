@@ -60,5 +60,4 @@ class TempController(
     companion object {
         val logger = getLogger()
     }
-
 }
