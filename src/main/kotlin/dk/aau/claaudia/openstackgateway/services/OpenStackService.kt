@@ -137,7 +137,6 @@ class OpenStackService(private val config: OpenStackProperties) {
     fun verifyStack(stackId: String) {
         val client = getClient()
 
-
     }
 
     fun listVolumes(): List<Volume> {
@@ -165,7 +164,6 @@ class OpenStackService(private val config: OpenStackProperties) {
     }
 
     fun deattachVolumeToInstance(instance: Server, volume: Volume) {
-
         // FIXME Disse fejl skal vel boble ud og fanges et andet sted?
         // Det giver vist ikke helt mening at smide httpstatus beskeder inde i servicen?
         val volumeAttachment: VolumeAttachment = volume.attachments.find { it.serverId == instance.id } ?:
@@ -173,22 +171,6 @@ class OpenStackService(private val config: OpenStackProperties) {
         getClient().compute().servers().detachVolume(instance.id, volumeAttachment.attachmentId)
     }
 
-//    fun createServer(name: String, flavor: String, image: String): Server {
-//
-//        //Hej den her brokker sig over at den ikke får network ind
-//
-//        val server = Builders.server()
-//            .name(name)
-//            .flavor(flavor)
-//            .image(image)
-//            .addPersonality("/etc/motd", "Yay CLAAUDIA")
-//            .build()
-//
-//        return getClient().compute().servers().boot(server)
-//    }
-
-// Create a Snapshot
-    //os.compute().servers().createSnapshot("id", "name");
 
     companion object {
         val logger = getLogger()

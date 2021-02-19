@@ -9,6 +9,9 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
 
+/**
+ * Temporary endpoints for doing manual creation and deletion of stacks
+ */
 @RestController
 @SecurityRequirement(name = "bearer-key")
 @RequestMapping("/ucloud/claaudia/compute/jobs/temp")
@@ -47,11 +50,11 @@ class TempController(
         }
     }
 
-    @DeleteMapping("/")
+    @DeleteMapping(value = ["/{id}"])
     @ResponseStatus(HttpStatus.OK)
-    fun deleteJobs(@RequestBody request: TempJobRequest) {
-        logger.info("Received job delete request, $request")
-        openstackService.deleteStack(request.job_id)
+    fun deleteJobs(@PathVariable id: String) {
+        logger.info("Received job delete request. Id: $id")
+        openstackService.deleteStack(id)
     }
 
     companion object {
