@@ -3,7 +3,6 @@ ucloud:
   secret: thereisnospoon
   endpoints:
     jobs: https://test.test.test/api/jobs/control/
-  stackPrefix: ucloud
 
 app:
   security:
@@ -27,3 +26,4 @@ openstack:
     id: testtest
   endpoints:
     auth: https://test.test.test.test:5000/v3/
+  stackPrefix: ucloud
