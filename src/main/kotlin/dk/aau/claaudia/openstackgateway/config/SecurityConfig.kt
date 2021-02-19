@@ -8,7 +8,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
 import org.springframework.security.config.http.SessionCreationPolicy
 
-
 @Configuration
 @Profile("prod", "test", "dev")
 class JWTSecurityConfig(val appProperties: AppProperties) : WebSecurityConfigurerAdapter() {
