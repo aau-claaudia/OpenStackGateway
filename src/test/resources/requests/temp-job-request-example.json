@@ -1,0 +1,14 @@
+{
+  "job_id": "58869612-2698-4c63-8211-1a4d2f10f1db",
+  "owner_username": "user",
+  "owner_project": "a5e56c4c-e90a-4481-bc46-62480f26271a",
+  "base_image": "ubuntu20-04",
+  "machine_template": "aau1-large",
+  "total_grant_allocation": "1000000000 DKK",
+  "request_parameters": {
+    "pubKey": {
+      "type": "text",
+      "value": "some ssh key"
+    }
+  }
+}
