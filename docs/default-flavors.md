@@ -9,8 +9,8 @@ And last, the pricing is something I just came up with...
 
 Name | vCPU | RAM | Volatile Storage | GPU | Price 
 --- | --- | --- | --- | --- | --- 
-aau-general-small | 4 vCPU | 16 Gb | 1 Tb | N/A | 0.34 DKK/hour
-aau-general-medium | 8 vCPU | 32 Gb | 1 Tb | N/A | 0.68 DKK/hour
-aau-general-large | 16 vCPU | 64 Gb | 1 Tb | N/A | 1.37 DKK/hour
-aau-general-xlarge | 64 vCPU | 256 Gb | 1 Tb | N/A | 5.50 DKK/hour
-aau-t4-1 | 10 vCPU | 40 Gb | 1 Tb | T4 16 Gb | 8.50 DKK/hour
+uc-general-small | 4 vCPU | 16 Gb | 1 Tb | N/A | 0.34 DKK/hour
+uc-general-medium | 8 vCPU | 32 Gb | 1 Tb | N/A | 0.68 DKK/hour
+uc-general-large | 16 vCPU | 64 Gb | 1 Tb | N/A | 1.37 DKK/hour
+uc-general-xlarge | 64 vCPU | 256 Gb | 1 Tb | N/A | 5.50 DKK/hour
+uc-t4-1 | 10 vCPU | 40 Gb | 1 Tb | T4 16 Gb | 8.50 DKK/hour
