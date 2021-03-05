@@ -13,10 +13,13 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
 
+/**
+ * Implements the api specified in ProviderAPI.html
+ */
 @RestController
 @SecurityRequirement(name = "bearer-key")
 @RequestMapping("/ucloud/claaudia/compute/jobs")
-class JobController(
+class ProviderController(
     private val openstackService: OpenStackService,
     private val templateService: TemplateService
 ) {
