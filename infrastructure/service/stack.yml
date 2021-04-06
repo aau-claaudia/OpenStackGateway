@@ -1,0 +1,48 @@
+version: '3.8'
+services:
+
+  web:
+    image: caddy:2.2.1-alpine
+    volumes: 
+      - caddy_data:/data
+    environment:
+      SITE_HOST: ${SITE_HOST}
+    ports:
+      - 80:80
+      - 443:443
+    configs:
+      - source: caddy_file
+        target: /etc/caddy/Caddyfile
+        
+  openstackgateway:
+    image: ghcr.io/aau-claaudia/openstackgateway:${OSG_SHA}
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE}
+
+  configserver:
+    image: ghcr.io/aau-claaudia/configserver:05f1a3
+    secrets:
+      - source: config_privatekey
+        target: /root/.ssh/id_rsa
+
+volumes:
+  # caddy_data is used for caddy to store its lets encrypt certificates
+  caddy_data:
+
+configs:
+  caddy_file:
+    file: ./Caddyfile
+
+secrets:
+  # this key have to be manually generated and injected prior to deploying this stack
+  # the pairs public part should be added as an deploy key on the actual config repo
+  config_privatekey:
+    external: true
+
+# set encryption bit on default network just as a precaution
+# - we never know when we start spanning multiple nodes
+networks:
+  default:
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
