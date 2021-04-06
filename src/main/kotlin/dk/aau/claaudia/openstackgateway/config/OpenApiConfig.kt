@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration
         title = "Gateway service",
         version = "0.0.1"
     ),
-    servers = [Server(url = "/")]
+    servers = [Server(url = "/")],
 )
 class OpenApiConfig {
     @Bean
