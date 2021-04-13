@@ -4,6 +4,8 @@ import dk.aau.claaudia.openstackgateway.config.OpenStackProperties
 import dk.aau.claaudia.openstackgateway.extensions.getLogger
 import org.openstack4j.api.Builders
 import org.openstack4j.api.OSClient.OSClientV3
+import org.openstack4j.core.transport.Config
+import org.openstack4j.openstack.identity.internal.DefaultEndpointURLResolver
 import org.openstack4j.model.common.Identifier
 import org.openstack4j.model.compute.Flavor
 import org.openstack4j.model.compute.Server
@@ -22,20 +24,24 @@ import java.util.*
 
 @Service
 class OpenStackService(private val config: OpenStackProperties) {
-    private val domainIdentifier = Identifier.byId("default")
+//    private val domainIdentifier = Identifier.byId("default")
+    private val domainIdentifier = Identifier.byId(config.domain)
     private val projectIdentifier = Identifier.byId(config.project.id)
     private var token: Token? = null
     private fun Token.hasExpired(): Boolean = expires.before(Date())
 
     private fun getClient(): OSClientV3 {
-        //OSFactory.enableHttpLoggingFilter(true)
+        OSFactory.enableHttpLoggingFilter(true)
         if (token?.hasExpired() == false) {
             logger.info("Using existing token")
             return OSFactory.clientFromToken(token)
         } else {
             logger.info("Getting new token")
             //Create and saving client for future use
+            val conf = Config.newConfig()
+            conf.withEndpointNATResolution("130.225.199.3")
             val client = OSFactory.builderV3()
+//                .withConfig(conf)
                 .endpoint(config.endpoints.auth)
                 .credentials(
                     config.username,
@@ -85,7 +91,15 @@ class OpenStackService(private val config: OpenStackProperties) {
     }
 
     fun listImages(): List<Image?> {
-        return getClient().imagesV2().list()
+        val client = getClient()
+        logger.info("client, $client")
+        return client.imagesV2().list()
+    }
+
+    fun getImage(id: String): Image? {
+        val img = getClient().imagesV2().get(id)
+        logger.info("image, $img")
+        return img
     }
 
 //    fun listTemplates(): List<Template?> {

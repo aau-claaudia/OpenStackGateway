@@ -1,5 +1,6 @@
 package dk.aau.claaudia.openstackgateway.services;
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import dk.aau.claaudia.openstackgateway.extensions.getLogger
 import dk.aau.claaudia.openstackgateway.models.JsonTemplate
@@ -7,6 +8,10 @@ import org.openstack4j.api.Builders
 import org.openstack4j.model.heat.Template
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
+import java.util.HashMap
+
+
+
 
 /**
  * This class contains utility functions for loading and verification of heat templates
@@ -19,7 +24,9 @@ public class TemplateService(
 ) {
 
     val templates = mapOf(
-        "simple-stack" to "/heat-templates/simple-stack.yaml"
+        "simple-stack" to "/heat-templates/simple-stack.yaml",
+        "ucloud" to "/heat-templates/ucloud-provisioned-stack.yaml",
+        "user-data" to "/heat-templates/user-data.yaml"
     )
 
     fun getTemplate(name: String): Template {
@@ -27,6 +34,22 @@ public class TemplateService(
         validateTemplate(template)
 
         return Builders.template().templateJson(template).build()
+    }
+
+    fun getUserParameters(ssh_key: String): Any {
+        var template = this::class.java.getResource(templates["user-data"]).readText(Charsets.UTF_8)
+        template = template.replace("SSHKEYREPLACE", ssh_key)
+        // validateTemplate(template)
+
+        val tmp = Builders.template().templateJson(template).build()
+        // val t: JsonTemplate = mapper.readValue(tmp.templateJson, JsonTemplate::class.java)
+        return mapper.readValue(tmp.templateJson, Any::class.java)
+    }
+
+    fun getHeatParameters(template: Template): Map<String, Any> {
+        val tmp = Builders.template().templateJson(template.templateJson).build()
+        val t: Map<*, *> = mapper.readValue(tmp.templateJson, Map::class.java)
+        return t["parameters"] as Map<String, Any>
     }
 
     fun getTestTemplate(): Template {

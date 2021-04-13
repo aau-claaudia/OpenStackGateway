@@ -1,0 +1,8 @@
+#cloud-config
+users:
+  - default
+  - name: ucloud
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - SSHKEYREPLACE

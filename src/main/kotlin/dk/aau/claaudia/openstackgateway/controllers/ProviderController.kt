@@ -1,6 +1,7 @@
 package dk.aau.claaudia.openstackgateway.controllers
 
 import dk.aau.claaudia.openstackgateway.extensions.getLogger
+import dk.aau.claaudia.openstackgateway.models.JsonTemplate
 import dk.aau.claaudia.openstackgateway.models.requests.BulkRequest
 import dk.aau.claaudia.openstackgateway.services.OpenStackService
 import dk.aau.claaudia.openstackgateway.services.TemplateService
@@ -12,6 +13,12 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Bean
+
+import dk.sdu.cloud.providers.*
+import kotlin.reflect.full.findParameterByName
+import kotlin.reflect.full.memberProperties
 
 /**
  * Implements the api specified in ProviderAPI.html
@@ -21,8 +28,27 @@ import org.springframework.web.server.ResponseStatusException
 @RequestMapping("/ucloud/claaudia/compute/jobs")
 class ProviderController(
     private val openstackService: OpenStackService,
-    private val templateService: TemplateService
+    private val templateService: TemplateService,
+    @Value("\${ucloud.refreshToken}")
+    private val refreshToken: String?
 ) {
+
+//    @Bean
+//    fun client(
+//        @Value("\${ucloud.refreshToken}")
+//        refreshToken: String,
+//
+//        @Value("\${ucloud.host}")
+//        host: String,
+//
+//        @Value("\${ucloud.tls:false}")
+//        tls: Boolean,
+//
+//        @Value("\${ucloud.port:#{null}}")
+//        port: Int?,
+//    ) = UCloudClient(refreshToken, host, tls, port)
+//
+
 
     @PostMapping("/")
     @ResponseStatus(HttpStatus.OK)
@@ -47,6 +73,7 @@ class ProviderController(
                 val requiredParameters = templateParameters.filter { (_, parameter) -> !parameter.containsKey("default") }.map { it.key }
                 val missingParameters = requiredParameters.filter { it -> it !in templateVars.keys }
                 if (missingParameters.isNotEmpty()) {
+                    logger.info("Missing parameters, $missingParameters")
                     throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing parameters: $missingParameters")
                 }
 
@@ -56,6 +83,43 @@ class ProviderController(
                 throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing ID on job.")
             }
         }
+    }
+
+    @PostMapping("/new/")
+    @ResponseStatus(HttpStatus.OK)
+    fun createJobsNew(@RequestBody request: Map<String,Any>) {
+        logger.info("Recieved new job create request, $request")
+        val pjobid = request["job_id"] as String
+        val parameters = request["request_parameters"] as Map<String, Any>
+        val sshkey = (parameters["pubKey"] as Map<String, Any>)["value"] as String
+
+        val pbaseimage: String? = if ("base_image" in request) request["base_image"].toString() else null
+        val img = if (pbaseimage != null) openstackService.getImage(pbaseimage) else null
+
+        if (img == null) {
+            val msg = "Base Image not found, $pbaseimage"
+            logger.warn(msg)
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, msg)
+        }
+
+        val userDataParameters = templateService.getUserParameters(sshkey)
+
+        val heatTemplate = templateService.getTemplate("ucloud")
+        val heatParameters = templateService.getHeatParameters(heatTemplate)
+
+        // set valid template parameters from request
+        val params = mutableMapOf<String, String>()
+        heatParameters.forEach {
+            if (request[it.key] != null){
+                params[it.key] = request[it.key].toString()
+            }
+        }
+
+        // set image and user_data
+        params["image"] = img.id
+        params["user_data"] = userDataParameters.toString()
+
+        openstackService.createStack("$pjobid", heatTemplate.templateJson, params)
     }
 
     @DeleteMapping("/delete/{jobId}")
@@ -91,6 +155,8 @@ class ProviderController(
     @ResponseStatus(HttpStatus.OK)
     fun verifyJobs(@RequestBody request: BulkRequest<Job>) {
         println("Hej verify request, $request")
+        println(refreshToken)
+        println("$refreshToken")
         //Her hiver vi hvad vi vil ud fra requesten og kaster efter openstack. WINWIN
     }
 

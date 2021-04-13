@@ -8,6 +8,7 @@ import org.springframework.boot.context.properties.ConstructorBinding
 data class OpenStackProperties(
     var username: String,
     val password: String,
+    val domain: String,
     val endpoints: Endpoints,
     val project: Project,
     val stackPrefix: String
