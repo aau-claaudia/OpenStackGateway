@@ -1,17 +1,28 @@
 package dk.aau.claaudia.openstackgateway.config
 
+
+import dk.sdu.cloud.providers.UCloudClient
 import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.Configuration
-import org.springframework.web.reactive.function.client.WebClient
+
 
 @Configuration
+//@ComponentScan("dk.aau.claaudia.openstackgateway", "dk.sdu.cloud.providers")
 class UCloudClientConfig(private val config: UCloudProperties) {
 
+//    @Bean
+//    fun createWebClient(): WebClient {
+//        //FIXME Add authentication for outgoing requests here
+//        return WebClient.create(config.endpoints.jobs)
+//    }
+
+//    @Bean
+//    fun create() {
+//    }
+
     @Bean
-    fun createWebClient(): WebClient {
-        //FIXME Add authentication for outgoing requests here
-        return WebClient.create(config.endpoints.jobs)
-    }
+    fun createUCloudClient() = UCloudClient(config.refreshToken, config.host, config.tls, config.port)
 
 //    @Bean
 //    fun authorizedClientManager(

@@ -28,6 +28,37 @@ java.sourceCompatibility = JavaVersion.VERSION_11
 
 repositories {
     mavenCentral()
+    maven {
+        name = "UCloud Packages"
+        url = uri("https://maven.pkg.github.com/sdu-escience/ucloud")
+        credentials {
+            val helpText = """
+				
+				
+				
+				
+				
+				Missing GitHub credentials. These are required to pull the packages required for this project. Please 
+				create a personal access token here: https://github.com/settings/tokens. This access token require
+				the 'read:packages' scope.
+				
+				With this information you will need to add the following lines to your Gradle properties
+				(~/.gradle/gradle.properties):
+				
+				gpr.user=YOUR_GITHUB_USERNAME
+				gpr.token=YOUR_GITHUB_PERSONAL_ACCESS_TOKEN
+				
+				
+				
+				
+				
+			""".trimIndent()
+            username = (project.findProperty("gpr.user") as? String?)
+                ?: System.getenv("GITHUB_USERNAME") ?: error(helpText)
+            password = (project.findProperty("gpr.key") as? String?)
+                ?: System.getenv("GITHUB_TOKEN") ?: error(helpText)
+        }
+    }
 }
 
 dependencies {
@@ -43,6 +74,11 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.github.openstack4j.core:openstack4j-core:$openstack4jVersion")
     implementation("com.github.openstack4j.core.connectors:openstack4j-httpclient:$openstack4jVersion")
+
+    implementation("dk.sdu.cloud:jvm-provider-support:2021.1.2")
+    //implementation("dk.sdu.cloud:jvm-provider-support:2021.1.0")
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
+
     implementation("org.liquibase:liquibase-core:4.2.2")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     testImplementation("org.springframework.boot:spring-boot-starter-test") {

@@ -1,8 +1,9 @@
 package dk.aau.claaudia.openstackgateway.services
 
 import dk.aau.claaudia.openstackgateway.extensions.getLogger
-import dk.aau.claaudia.openstackgateway.models.requests.BulkRequest
-import dk.aau.claaudia.openstackgateway.models.requests.bulkRequestOf
+import dk.sdu.cloud.calls.BulkRequest
+
+
 import dk.sdu.cloud.models.DksducloudapporchestratorapiJobsControlChargeCreditsRequestItem
 import dk.sdu.cloud.models.DksducloudapporchestratorapiJobsControlUpdateRequestItem
 import org.springframework.http.HttpHeaders
