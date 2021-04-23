@@ -1,9 +1,9 @@
 package dk.aau.claaudia.openstackgateway.controllers
 
 import dk.aau.claaudia.openstackgateway.extensions.getLogger
-import dk.aau.claaudia.openstackgateway.models.requests.BulkRequest
 import dk.aau.claaudia.openstackgateway.services.OpenStackService
 import dk.aau.claaudia.openstackgateway.services.TemplateService
+import dk.sdu.cloud.calls.BulkRequest
 import dk.sdu.cloud.models.*
 import dk.sdu.cloud.models.modified.ComputeOpenInteractiveSessionResponse
 import dk.sdu.cloud.models.modified.Job
