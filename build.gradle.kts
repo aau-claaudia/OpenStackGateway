@@ -27,6 +27,7 @@ version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven {
         name = "UCloud Packages"
@@ -64,7 +65,7 @@ repositories {
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-webflux:2.4.2")
-    implementation("org.springframework.boot:spring-boot-starter-security")
+    //implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.cloud:spring-cloud-starter-config:3.0.1")
     implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.0.1")
     implementation("com.auth0:java-jwt:3.12.1")
@@ -76,7 +77,7 @@ dependencies {
     implementation("com.github.openstack4j.core.connectors:openstack4j-httpclient:$openstack4jVersion")
 
     implementation("dk.sdu.cloud:jvm-provider-support:2021.1.2")
-    //implementation("dk.sdu.cloud:jvm-provider-support:2021.1.0")
+    implementation("com.squareup.okhttp3:okhttp:4.6.0")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
 
     implementation("org.liquibase:liquibase-core:4.2.2")
