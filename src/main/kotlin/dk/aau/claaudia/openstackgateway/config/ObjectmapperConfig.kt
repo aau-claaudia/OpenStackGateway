@@ -11,13 +11,13 @@ import org.springframework.context.annotation.Primary
 @Configuration
 class ObjectmapperConfig {
 
-    @Bean
-    @Primary
-    fun objectMapper(): ObjectMapper {
-        val objectMapper = ObjectMapper()
-        objectMapper.registerModule(KotlinModule())
-        return objectMapper
-    }
+//    @Bean
+//    @Primary
+//    fun objectMapper(): ObjectMapper {
+//        val objectMapper = ObjectMapper()
+//        objectMapper.registerModule(KotlinModule())
+//        return objectMapper
+//    }
 
     @Bean(name = ["YAMLMapper"])
     fun yamlObjectMapper(): ObjectMapper {
