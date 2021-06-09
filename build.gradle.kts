@@ -32,33 +32,33 @@ repositories {
     maven {
         name = "UCloud Packages"
         url = uri("https://maven.pkg.github.com/sdu-escience/ucloud")
-//        credentials {
-//            val helpText = """
-//
-//
-//
-//
-//
-//				Missing GitHub credentials. These are required to pull the packages required for this project. Please
-//				create a personal access token here: https://github.com/settings/tokens. This access token require
-//				the 'read:packages' scope.
-//
-//				With this information you will need to add the following lines to your Gradle properties
-//				(~/.gradle/gradle.properties):
-//
-//				gpr.user=YOUR_GITHUB_USERNAME
-//				gpr.token=YOUR_GITHUB_PERSONAL_ACCESS_TOKEN
-//
-//
-//
-//
-//
-//			""".trimIndent()
-//            username = (project.findProperty("gpr.user") as? String?)
-//                ?: System.getenv("GITHUB_USERNAME") ?: error(helpText)
-//            password = (project.findProperty("gpr.key") as? String?)
-//                ?: System.getenv("GITHUB_TOKEN") ?: error(helpText)
-//        }
+        credentials {
+            val helpText = """
+
+
+
+
+
+				Missing GitHub credentials. These are required to pull the packages required for this project. Please
+				create a personal access token here: https://github.com/settings/tokens. This access token require
+				the 'read:packages' scope.
+
+				With this information you will need to add the following lines to your Gradle properties
+				(~/.gradle/gradle.properties):
+
+				gpr.user=YOUR_GITHUB_USERNAME
+				gpr.token=YOUR_GITHUB_PERSONAL_ACCESS_TOKEN
+
+
+
+
+
+			""".trimIndent()
+            username = (project.findProperty("gpr.user") as? String?)
+                ?: System.getenv("CR_USERNAME") ?: error(helpText)
+            password = (project.findProperty("gpr.key") as? String?)
+                ?: System.getenv("CR_PAT") ?: error(helpText)
+        }
     }
 }
 
