@@ -19,7 +19,9 @@ public class TemplateService(
 ) {
 
     val templates = mapOf(
-        "simple-stack" to "/heat-templates/simple-stack.yaml"
+        //"simple-stack" to "/heat-templates/simple-stack.yaml",
+        "ucloud" to "/heat-templates/ucloud-provisioned-stack.yaml"
+        //"user-data" to "/heat-templates/user-data.yaml"
     )
 
     fun getTemplate(name: String): Template {
@@ -29,8 +31,24 @@ public class TemplateService(
         return Builders.template().templateJson(template).build()
     }
 
+//    fun getUserParameters(ssh_key: String): Any {
+//        var template = this::class.java.getResource(templates["user-data"]).readText(Charsets.UTF_8)
+//        template = template.replace("SSHKEYREPLACE", ssh_key)
+//        // validateTemplate(template)
+//
+//        val tmp = Builders.template().templateJson(template).build()
+//        // val t: JsonTemplate = mapper.readValue(tmp.templateJson, JsonTemplate::class.java)
+//        return mapper.readValue(tmp.templateJson, Any::class.java)
+//    }
+//
+//    fun getHeatParameters(template: Template): Map<String, Any> {
+//        val tmp = Builders.template().templateJson(template.templateJson).build()
+//        val t: Map<*, *> = mapper.readValue(tmp.templateJson, Map::class.java)
+//        return t["parameters"] as Map<String, Any>
+//    }
+
     fun getTestTemplate(): Template {
-        val template = this::class.java.getResource("/heat-templates/simple-stack.yaml").readText(Charsets.UTF_8)
+        val template = this::class.java.getResource(templates["ucloud"]).readText(Charsets.UTF_8)
         validateTemplate(template)
 
         return Builders.template().templateJson(template).build()
@@ -52,10 +70,18 @@ public class TemplateService(
     }
 
     // TODO move these util functions somewhere else. Consider an extension function on heat Template??
-    fun extractParameters(template: Template): Map<String, Map<String, String>> {
+    fun extractParameters(template: Template): Map<String, Map<String, Any>> {
         val t: JsonTemplate = mapper.readValue(template.templateJson, JsonTemplate::class.java)
 
         return t.parameters
+    }
+
+    fun findMissingParameters(template: Template, providedParameters: Map<String, String>): List<String> {
+        // Verify . Extract params from template and compare with provided params.
+        val templateParameters = extractParameters(template)
+        val requiredParameters =
+            templateParameters.filter { (_, parameter) -> !parameter.containsKey("default") }.map { it.key }
+        return requiredParameters.filter { it -> it !in providedParameters.keys }
     }
 
     companion object {

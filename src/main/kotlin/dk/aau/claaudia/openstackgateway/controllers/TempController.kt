@@ -5,6 +5,7 @@ import dk.aau.claaudia.openstackgateway.models.requests.TempJobRequest
 import dk.aau.claaudia.openstackgateway.services.OpenStackService
 import dk.aau.claaudia.openstackgateway.services.TemplateService
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import org.openstack4j.model.heat.Stack
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
@@ -13,7 +14,7 @@ import org.springframework.web.server.ResponseStatusException
  * Temporary endpoints for doing manual creation and deletion of stacks
  */
 @RestController
-@SecurityRequirement(name = "bearer-key")
+//@SecurityRequirement(name = "bearer-key")
 @RequestMapping("/ucloud/claaudia/compute/jobs/temp")
 class TempController(
     private val openstackService: OpenStackService,
@@ -31,21 +32,20 @@ class TempController(
 
             templateVars["image"] = request.base_image
             templateVars["flavor"] = request.machine_template
-            templateVars["public_keys"] = request.request_parameters.pubKey.value
+            templateVars["public_ssh_keys"] = request.request_parameters.pubKey.value
+
+
+            // GET THIS FROM CONFIG
+            templateVars["network"] = "2fa0bca2-6153-4753-a8e3-ddb588d29436"
+            templateVars["security_group"] = "50492808-5eb0-4a49-a6fd-163740a44f9d"
+            templateVars["key_name"] = "root_openstack-master01"
+            templateVars["az"] = "nova"
 
             val testTemplate = templateService.getTestTemplate()
-            val templateParameters = templateService.extractParameters(testTemplate)
 
-            // Subject to change
-            // Verify parameters are as expected. Extract params from template and compare with provided params.
-            // TODO Can this be verified somewhere else? We need required template params
-            val requiredParameters =
-                templateParameters.filter { (_, parameter) -> !parameter.containsKey("default") }.map { it.key }
-            val missingParameters = requiredParameters.filter { it -> it !in templateVars.keys }
-            if (missingParameters.isNotEmpty()) {
-                throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing parameters: $missingParameters")
-            }
 
+            logger.info("Create stack here: $request.job_id $templateVars")
+            logger.info("Template: $testTemplate")
             openstackService.createStack(request.job_id, testTemplate.templateJson, templateVars)
         }
     }
@@ -55,6 +55,12 @@ class TempController(
     fun deleteJobs(@PathVariable id: String) {
         logger.info("Received job delete request. Id: $id")
         openstackService.deleteStack(id)
+    }
+
+    @GetMapping(value = ["/{id}"])
+    fun getStack(@PathVariable id: String): Stack? {
+        logger.info("Received get stack request. Id: $id")
+        return openstackService.getStack(id)
     }
 
     companion object {

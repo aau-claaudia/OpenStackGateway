@@ -47,17 +47,17 @@ resources:
       networks:
         - port: { get_resource: ucloud_port }
 
-  cloud-init-config:
-    # cloud init demo resource
-    type: OS::Heat::CloudConfig
-    properties:
-      cloud_config:
-        users:
-          - name: { get_param: username}
-            gecos: UCloud
-            sudo: ALL=(ALL) NOPASSWD:ALL
-            shell: /bin/bash
-            ssh-authorized-keys: { get_param: public_keys }
+#  cloud-init-config:
+#    # cloud init demo resource
+#    type: OS::Heat::CloudConfig
+#    properties:
+#      cloud_config:
+#        users:
+#          - name: { get_param: username}
+#            gecos: UCloud
+#            sudo: ALL=(ALL) NOPASSWD:ALL
+#            shell: /bin/bash
+#            ssh-authorized-keys: { get_param: public_keys }
 
   ucloud_port:
     type: OS::Neutron::Port

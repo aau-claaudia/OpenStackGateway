@@ -2,12 +2,20 @@ package dk.aau.claaudia.openstackgateway.services
 
 import dk.aau.claaudia.openstackgateway.config.OpenStackProperties
 import dk.aau.claaudia.openstackgateway.extensions.getLogger
+import dk.aau.claaudia.openstackgateway.models.StackStatus
+import dk.sdu.cloud.app.orchestrator.api.*
+import dk.sdu.cloud.app.store.api.AppParameterValue
+
+
+import dk.sdu.cloud.calls.client.orThrow
+import dk.sdu.cloud.providers.UCloudClient
+import dk.sdu.cloud.providers.call
 import org.openstack4j.api.Builders
 import org.openstack4j.api.OSClient.OSClientV3
 import org.openstack4j.model.common.Identifier
 import org.openstack4j.model.compute.Flavor
 import org.openstack4j.model.compute.Server
-
+import org.openstack4j.model.heat.Event
 import org.openstack4j.model.heat.Stack
 import org.openstack4j.model.identity.v3.Token
 import org.openstack4j.model.identity.v3.User
@@ -19,9 +27,15 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import java.util.*
+import java.util.concurrent.Executors
+
 
 @Service
-class OpenStackService(private val config: OpenStackProperties) {
+class OpenStackService(
+    private val config: OpenStackProperties,
+    private val templateService: TemplateService,
+    private val client: UCloudClient
+    ) {
     private val domainIdentifier = Identifier.byId("default")
     private val projectIdentifier = Identifier.byId(config.project.id)
     private var token: Token? = null
@@ -50,7 +64,7 @@ class OpenStackService(private val config: OpenStackProperties) {
     }
 
     private fun prefixStackName(ucloudJobId: String): String {
-        return "${config.stackPrefix}${ucloudJobId}"
+        return "${config.stackPrefix}-${ucloudJobId}"
     }
 
     fun test(): String {
@@ -85,7 +99,15 @@ class OpenStackService(private val config: OpenStackProperties) {
     }
 
     fun listImages(): List<Image?> {
-        return getClient().imagesV2().list()
+        val client = getClient()
+        logger.info("client, $client")
+        return client.imagesV2().list()
+    }
+
+    fun getImage(id: String): Image? {
+        val img = getClient().imagesV2().get(id)
+        logger.info("image, $img")
+        return img
     }
 
 //    fun listTemplates(): List<Template?> {
@@ -100,6 +122,61 @@ class OpenStackService(private val config: OpenStackProperties) {
         return getClient().heat().stacks().getStackByName(prefixStackName(name))
     }
 
+    // TODO Move this to config or make sure ucloud apps matches openstack images
+    fun getImage(name: String, version: String): String {
+        val images = mapOf("aau-ubuntu-vm20.04" to "Ubuntu 20.04 LTS")
+
+        return images.getOrDefault("$name$version", "")
+    }
+
+    fun createStacks(jobs: List<Job>): MutableList<Stack?> {
+        logger.info("creating stacks: $jobs.size")
+
+        val template = templateService.getTemplate("ucloud")
+
+        val createdStacks = mutableListOf<Stack?>()
+
+        for (job in jobs) {
+            val parameters = mutableMapOf<String, String>()
+
+            parameters["image"] = getImage(job.specification.application.name, job.specification.application.version)
+            parameters["flavor"] = job.specification.product.id
+
+            // FIXME Handle all cases here. Consider handling these with json objects?
+            for (parameter in job.specification.parameters!!){
+                val v = when (val value = parameter.value) {
+                    is AppParameterValue.Text -> value.value
+                    is AppParameterValue.File -> TODO()
+                    is AppParameterValue.Bool -> TODO()
+                    is AppParameterValue.Integer -> TODO()
+                    is AppParameterValue.FloatingPoint -> TODO()
+                    is AppParameterValue.Peer -> TODO()
+                    is AppParameterValue.License -> TODO()
+                    is AppParameterValue.BlockStorage -> TODO()
+                    is AppParameterValue.Network -> TODO()
+                    is AppParameterValue.Ingress -> TODO()
+                    else -> null
+                }
+                parameters[parameter.key] = v as String
+            }
+
+            parameters["network"] = config.network
+            parameters["security_group"] = config.securityGroup
+            parameters["key_name"] = config.keyName
+            parameters["az"] = config.availabilityZone
+
+            val missingParameters: List<String> = templateService.findMissingParameters(template, parameters)
+            if (missingParameters.isNotEmpty()) {
+                logger.error("Missing parameters: $missingParameters")
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing parameters: $missingParameters")
+            }
+
+            val createStack = createStack(job.id, template.templateJson, parameters)
+            createdStacks.add(createStack)
+        }
+        return createdStacks
+    }
+
     fun createStack(name: String, template: String, parameters: MutableMap<String, String>): Stack? {
         logger.info("Start stack: $name")
 
@@ -112,10 +189,54 @@ class OpenStackService(private val config: OpenStackProperties) {
             .timeoutMins(60)
             .build()
 
+        // TODO Consider passing parameters as a file
+        //Builders.stack().files(mutableMapOf("file1" to "file contents"))
+
         client.heat().stacks().create(build)
         //The stack returned by create only has id and href
-        //But I guess this only return a 200
-        return getStack(prefixStackName(name))
+        //But I guess this only returns a 200
+        return getStack(name)
+    }
+
+    private val threadPool = Executors.newCachedThreadPool()
+
+    fun monitorStackCreations(jobs: List<Job>) {
+        Thread.sleep(5000) // TODO Status is not set if we change this too quickly (https://github.com/SDU-eScience/UCloud/issues/2303)
+
+        for (job in jobs) {
+            threadPool.execute {
+                val startTime = System.currentTimeMillis()
+                while(startTime + config.monitor.timeout > System.currentTimeMillis()) {
+                    val stack = getStack(job.id)
+                    if (stack != null) {
+                        logger.info("Verifying stack status", stack, stack.status)
+                        if (stack.status == StackStatus.CREATE_COMPLETE.name) {
+                            logger.info("Stack CREATE complete")
+                            JobsControl.update.call(
+                                JobsControlUpdateRequest(listOf(
+                                    JobsControlUpdateRequestItem(
+                                        job.id,
+                                        JobState.RUNNING,
+                                        "Stack CREATE complete"
+                                    )
+                                )),
+                                client
+                            ).orThrow()
+                            return@execute
+                        }
+                    }
+                    // Sleep until next retry
+                    logger.info("Waiting to retry")
+                    Thread.sleep(config.monitor.delay)
+                }
+            }
+        }
+
+    }
+
+    fun getStackEvents(stackName: String, stackIdentity: String): MutableList<out Event>? {
+        val client = getClient()
+        return client.heat().events().list(stackName, stackIdentity)
     }
 
     fun deleteStack(stackIdentity: String) {
@@ -170,7 +291,6 @@ class OpenStackService(private val config: OpenStackProperties) {
             throw ResponseStatusException(HttpStatus.NOT_FOUND, "Volume not found")
         getClient().compute().servers().detachVolume(instance.id, volumeAttachment.attachmentId)
     }
-
 
     companion object {
         val logger = getLogger()

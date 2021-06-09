@@ -1,0 +1,65 @@
+heat_template_version: 2014-10-16
+
+description:
+  uCloud provisioned stack
+
+parameters:
+  az:
+    type: string
+    description: availability zone
+    default: uCloud
+  flavor:
+    type: string
+    description: Flavor for the server to be created
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+  image:
+    type: string
+    description: Image ID or image name to use for the server
+    constraints:
+      - custom_constraint: glance.image
+  network:
+    type: string
+    description: Network used by the server
+  security_group:
+    type: string
+    description: Network security_group
+  username:
+    type: string
+    default: ucloud
+  public_ssh_keys:
+    type: comma_delimited_list
+  key_name:
+    type: string
+    description: Name of an existing key pair to use for the server
+    constraints:
+      - custom_constraint: nova.keypair
+
+resources:
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      networks: [{network: {get_param: network} }]
+      security_groups: [ get_param: security_group ]
+      availability_zone: { get_param : az }
+      user_data: { get_resource: cloud-init-config }
+      user_data_format: RAW
+      key_name: { get_param: key_name }
+
+  cloud-init-config:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        users:
+          - name: { get_param: username}
+            gecos: UCloud
+            sudo: ALL=(ALL) NOPASSWD:ALL
+            shell: /bin/bash
+            ssh-authorized-keys: { get_param: public_ssh_keys }
+
+outputs:
+  server_ip:
+    value: {get_attr: [ server, first_address ]}
