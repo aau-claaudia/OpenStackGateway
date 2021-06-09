@@ -76,7 +76,7 @@ dependencies {
     implementation("com.github.openstack4j.core:openstack4j-core:$openstack4jVersion")
     implementation("com.github.openstack4j.core.connectors:openstack4j-httpclient:$openstack4jVersion")
 
-    implementation("dk.sdu.cloud:jvm-provider-support:2021.1.2")
+    implementation("dk.sdu.cloud:jvm-provider-support:2021.1.5")
     implementation("com.squareup.okhttp3:okhttp:4.6.0")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
 
