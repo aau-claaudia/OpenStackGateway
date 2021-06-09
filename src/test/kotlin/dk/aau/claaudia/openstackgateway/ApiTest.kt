@@ -3,7 +3,7 @@ package dk.aau.claaudia.openstackgateway
 import com.ninjasquad.springmockk.MockkBean
 import dk.aau.claaudia.openstackgateway.services.OpenStackService
 import dk.aau.claaudia.openstackgateway.services.TemplateService
-import dk.aau.claaudia.openstackgateway.services.UCloudService
+//import dk.aau.claaudia.openstackgateway.services.UCloudService
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -20,8 +20,8 @@ class HttpControllersTests(@Autowired val mockMvc: MockMvc) {
     @MockkBean
     private lateinit var templateService: TemplateService
 
-    @MockkBean
-    private lateinit var ucloudService: UCloudService
+//    @MockkBean
+//    private lateinit var ucloudService: UCloudService
 
 
     @Test

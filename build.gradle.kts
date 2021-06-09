@@ -70,7 +70,7 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.0.1")
     implementation("com.auth0:java-jwt:3.12.1")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
-    implementation("org.springdoc:springdoc-openapi-ui:1.4.8")
+    implementation("org.springdoc:springdoc-openapi-ui:1.5.2")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.github.openstack4j.core:openstack4j-core:$openstack4jVersion")

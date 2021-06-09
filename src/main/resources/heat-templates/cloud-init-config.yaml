@@ -1,0 +1,11 @@
+cloud-init-config:
+  # cloud init demo resource fancy
+  type: OS::Heat::CloudConfig
+  properties:
+    cloud_config:
+      users:
+        - name: { get_param: username }
+          gecos: UCloud
+          sudo: ALL=(ALL) NOPASSWD:ALL
+          shell: /bin/bash
+          ssh-authorized-keys: { get_param: public_keys }
