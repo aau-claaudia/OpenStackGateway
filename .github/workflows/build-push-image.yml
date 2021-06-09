@@ -1,10 +1,6 @@
 name: build-push-image
 
-on:
-  push:
-    branches: 
-      - main
-      - infrastructure
+on: push
 
 # At the moment, the environments test and prod are somewhat a copy of each others
 # github actions does not support yaml anchors but does have something they call composite steps:
