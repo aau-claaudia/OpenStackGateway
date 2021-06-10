@@ -2,6 +2,9 @@ FROM gradle:jdk15 as build
 
 WORKDIR "/home/gradle/"
 
+ARG PACKAGES_USERNAME
+ARG PACKAGES_TOKEN
+
 COPY --chown=gradle:gradle "." "/home/gradle/"
 
 RUN /home/gradle/gradlew dependencies && \
