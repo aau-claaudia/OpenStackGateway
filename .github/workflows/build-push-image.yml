@@ -10,6 +10,9 @@ on: push
 jobs:
   app:
     runs-on: ubuntu-latest
+    env: 
+      PACKAGES_USERNAME: ${{ secrets.PACKAGES_USERNAME }}
+      PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
     steps:
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
@@ -25,9 +28,6 @@ jobs:
 
       - name: Build and push image
         uses: docker/build-push-action@v2
-        env: 
-          PACKAGES_USERNAME: ${{ secrets.PACKAGES_USERNAME }}
-          PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
         with:
           push: true
           tags: |
