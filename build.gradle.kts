@@ -55,9 +55,9 @@ repositories {
 
 			""".trimIndent()
             username = (project.findProperty("gpr.user") as? String?)
-                ?: System.getenv("CR_USERNAME") ?: error(helpText)
+                ?: System.getenv("PACKAGES_USERNAME") ?: error(helpText)
             password = (project.findProperty("gpr.key") as? String?)
-                ?: System.getenv("CR_PAT") ?: error(helpText)
+                ?: System.getenv("PACKAGES_TOKEN") ?: error(helpText)
         }
     }
 }
