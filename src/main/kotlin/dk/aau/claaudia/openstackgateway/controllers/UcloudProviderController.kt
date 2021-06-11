@@ -41,19 +41,8 @@ class SimpleCompute(
     override fun delete(request: BulkRequest<Job>) {
         log.info("Deleting some jobs: $request")
 
-        //openstackService.deleteStacks(request.items)
-        //openstackService.monitorStackDeletions(request.items)
-
-        JobsControl.update.call(
-            bulkRequestOf(request.items.map { job ->
-                JobsControlUpdateRequestItem(
-                    job.id,
-                    JobState.SUCCESS,
-                    "We are no longer running!"
-                )
-            }),
-            client
-        ).orThrow()
+        openstackService.deleteStacks(request.items)
+        openstackService.monitorStackDeletions(request.items)
     }
 
     override fun extend(request: BulkRequest<JobsProviderExtendRequestItem>) {

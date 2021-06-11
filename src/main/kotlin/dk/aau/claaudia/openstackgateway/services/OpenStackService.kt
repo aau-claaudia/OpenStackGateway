@@ -35,7 +35,7 @@ class OpenStackService(
     private val config: OpenStackProperties,
     private val templateService: TemplateService,
     private val client: UCloudClient
-    ) {
+) {
     private val domainIdentifier = Identifier.byId("default")
     private val projectIdentifier = Identifier.byId(config.project.id)
     private var token: Token? = null
@@ -54,7 +54,8 @@ class OpenStackService(
                 .credentials(
                     config.username,
                     config.password,
-                    domainIdentifier)
+                    domainIdentifier
+                )
                 .scopeToProject(projectIdentifier)
                 .authenticate()
             logger.info("Saving token")
@@ -143,7 +144,7 @@ class OpenStackService(
             parameters["flavor"] = job.specification.product.id
 
             // FIXME Handle all cases here. Consider handling these with json objects?
-            for (parameter in job.specification.parameters!!){
+            for (parameter in job.specification.parameters!!) {
                 val v = when (val value = parameter.value) {
                     is AppParameterValue.Text -> value.value
                     is AppParameterValue.File -> TODO()
@@ -195,7 +196,7 @@ class OpenStackService(
         client.heat().stacks().create(build)
         //The stack returned by create only has id and href
         //But I guess this only returns a 200
-        return getStack(name)
+        return getStack(prefixStackName(name))
     }
 
     private val threadPool = Executors.newCachedThreadPool()
@@ -206,20 +207,25 @@ class OpenStackService(
         for (job in jobs) {
             threadPool.execute {
                 val startTime = System.currentTimeMillis()
-                while(startTime + config.monitor.timeout > System.currentTimeMillis()) {
+                while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
                     val stack = getStack(job.id)
                     if (stack != null) {
                         logger.info("Verifying stack status", stack, stack.status)
                         if (stack.status == StackStatus.CREATE_COMPLETE.name) {
                             logger.info("Stack CREATE complete")
+//                            JobsControl.update.call(JobsControlUpdateRequest(
+//                              noget med ip her!!??
+//                            ), client).orThrow()
                             JobsControl.update.call(
-                                JobsControlUpdateRequest(listOf(
-                                    JobsControlUpdateRequestItem(
-                                        job.id,
-                                        JobState.RUNNING,
-                                        "Stack CREATE complete"
+                                JobsControlUpdateRequest(
+                                    listOf(
+                                        JobsControlUpdateRequestItem(
+                                            job.id,
+                                            JobState.RUNNING,
+                                            "Stack CREATE complete"
+                                        )
                                     )
-                                )),
+                                ),
                                 client
                             ).orThrow()
                             return@execute
@@ -239,6 +245,12 @@ class OpenStackService(
         return client.heat().events().list(stackName, stackIdentity)
     }
 
+    fun deleteStacks(jobs: List<Job>) {
+        for (job in jobs) {
+            deleteStack(job.id)
+        }
+    }
+
     fun deleteStack(stackIdentity: String) {
         val client = getClient()
 
@@ -255,9 +267,43 @@ class OpenStackService(
         }
     }
 
+    fun monitorStackDeletions(jobs: List<Job>) {
+        Thread.sleep(5000) // TODO Status is not set if we change this too quickly (https://github.com/SDU-eScience/UCloud/issues/2303)
+
+        for (job in jobs) {
+            threadPool.execute {
+                val startTime = System.currentTimeMillis()
+                while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
+                    val stack = getStack(job.id)
+                    if (stack == null) {
+                        logger.info("Could not find stack. Assume deleted", stack)
+                        JobsControl.update.call(
+                            JobsControlUpdateRequest(
+                                listOf(
+                                    JobsControlUpdateRequestItem(
+                                        job.id,
+                                        JobState.SUCCESS,
+                                        "Stack DELETE complete"
+                                    )
+                                )
+                            ),
+                            client
+                        ).orThrow()
+                        return@execute
+
+                    }
+                    logger.info("Stack found complete", stack)
+                    // Sleep until next retry
+                    logger.info("Waiting to retry")
+                    Thread.sleep(config.monitor.delay)
+                }
+            }
+        }
+
+    }
+
     fun verifyStack(stackId: String) {
         val client = getClient()
-
     }
 
     fun listVolumes(): List<Volume> {
@@ -268,11 +314,12 @@ class OpenStackService(
 
     fun createVolume(name: String, description: String, size: Int) {
         val volume = getClient().blockStorage().volumes()
-            .create(Builders.volume()
-                .name(name)
-                .description(description)
-                .size(size)
-                .build()
+            .create(
+                Builders.volume()
+                    .name(name)
+                    .description(description)
+                    .size(size)
+                    .build()
             )
     }
 
@@ -287,8 +334,8 @@ class OpenStackService(
     fun deattachVolumeToInstance(instance: Server, volume: Volume) {
         // FIXME Disse fejl skal vel boble ud og fanges et andet sted?
         // Det giver vist ikke helt mening at smide httpstatus beskeder inde i servicen?
-        val volumeAttachment: VolumeAttachment = volume.attachments.find { it.serverId == instance.id } ?:
-            throw ResponseStatusException(HttpStatus.NOT_FOUND, "Volume not found")
+        val volumeAttachment: VolumeAttachment = volume.attachments.find { it.serverId == instance.id }
+            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Volume not found")
         getClient().compute().servers().detachVolume(instance.id, volumeAttachment.attachmentId)
     }
 
