@@ -1,6 +1,8 @@
 package dk.aau.claaudia.openstackgateway.services
 
+import dk.aau.claaudia.openstackgateway.config.Messages
 import dk.aau.claaudia.openstackgateway.config.OpenStackProperties
+import dk.aau.claaudia.openstackgateway.config.ProviderProperties
 import dk.aau.claaudia.openstackgateway.extensions.getLogger
 import dk.aau.claaudia.openstackgateway.models.StackStatus
 import dk.sdu.cloud.app.orchestrator.api.*
@@ -26,6 +28,7 @@ import org.openstack4j.openstack.OSFactory
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
+import java.text.MessageFormat
 import java.util.*
 import java.util.concurrent.Executors
 
@@ -33,6 +36,8 @@ import java.util.concurrent.Executors
 @Service
 class OpenStackService(
     private val config: OpenStackProperties,
+    private val provider: ProviderProperties,
+    private val messages: Messages,
     private val templateService: TemplateService,
     private val client: UCloudClient
 ) {
@@ -105,7 +110,7 @@ class OpenStackService(
         return client.imagesV2().list()
     }
 
-    fun getImage(id: String): Image? {
+    fun mapImage(id: String): Image? {
         val img = getClient().imagesV2().get(id)
         logger.info("image, $img")
         return img
@@ -123,11 +128,52 @@ class OpenStackService(
         return getClient().heat().stacks().getStackByName(prefixStackName(name))
     }
 
-    // TODO Move this to config or make sure ucloud apps matches openstack images
-    fun getImage(name: String, version: String): String {
-        val images = mapOf("aau-ubuntu-vm20.04" to "Ubuntu 20.04 LTS")
+    fun mapImage(name: String, version: String): String {
+        val image = provider.images.firstOrNull{ it.ucloudName == name && it.ucloudVersion == version }
 
-        return images.getOrDefault("$name$version", "")
+        return when {
+            image?.openstackId?.isNotBlank() == true -> {
+                image.openstackId
+            }
+            image?.openstackName?.isNotBlank() == true -> {
+                image.openstackName
+            }
+            else -> {
+                ""
+            }
+        }
+    }
+
+    fun prepareParameters(job: Job): MutableMap<String, String> {
+        val parameters = mutableMapOf<String, String>()
+
+        parameters["image"] = mapImage(job.specification.application.name, job.specification.application.version)
+        parameters["flavor"] = job.specification.product.id
+
+        // FIXME Handle all cases here. Consider handling these with json objects?
+        for (parameter in job.specification.parameters!!) {
+            val v = when (val value = parameter.value) {
+                is AppParameterValue.Text -> value.value
+                is AppParameterValue.File -> TODO()
+                is AppParameterValue.Bool -> TODO()
+                is AppParameterValue.Integer -> TODO()
+                is AppParameterValue.FloatingPoint -> TODO()
+                is AppParameterValue.Peer -> TODO()
+                is AppParameterValue.License -> TODO()
+                is AppParameterValue.BlockStorage -> TODO()
+                is AppParameterValue.Network -> TODO()
+                is AppParameterValue.Ingress -> TODO()
+                else -> null
+            }
+            parameters[parameter.key] = v as String
+        }
+
+        parameters["network"] = config.network
+        parameters["security_group"] = config.securityGroup
+        parameters["key_name"] = config.keyName
+        parameters["az"] = config.availabilityZone
+
+        return parameters
     }
 
     fun createStacks(jobs: List<Job>): MutableList<Stack?> {
@@ -138,34 +184,9 @@ class OpenStackService(
         val createdStacks = mutableListOf<Stack?>()
 
         for (job in jobs) {
-            val parameters = mutableMapOf<String, String>()
+            val parameters = prepareParameters(job)
 
-            parameters["image"] = getImage(job.specification.application.name, job.specification.application.version)
-            parameters["flavor"] = job.specification.product.id
-
-            // FIXME Handle all cases here. Consider handling these with json objects?
-            for (parameter in job.specification.parameters!!) {
-                val v = when (val value = parameter.value) {
-                    is AppParameterValue.Text -> value.value
-                    is AppParameterValue.File -> TODO()
-                    is AppParameterValue.Bool -> TODO()
-                    is AppParameterValue.Integer -> TODO()
-                    is AppParameterValue.FloatingPoint -> TODO()
-                    is AppParameterValue.Peer -> TODO()
-                    is AppParameterValue.License -> TODO()
-                    is AppParameterValue.BlockStorage -> TODO()
-                    is AppParameterValue.Network -> TODO()
-                    is AppParameterValue.Ingress -> TODO()
-                    else -> null
-                }
-                parameters[parameter.key] = v as String
-            }
-
-            parameters["network"] = config.network
-            parameters["security_group"] = config.securityGroup
-            parameters["key_name"] = config.keyName
-            parameters["az"] = config.availabilityZone
-
+            // Verify template required parameters are present
             val missingParameters: List<String> = templateService.findMissingParameters(template, parameters)
             if (missingParameters.isNotEmpty()) {
                 logger.error("Missing parameters: $missingParameters")
@@ -179,7 +200,7 @@ class OpenStackService(
     }
 
     fun createStack(name: String, template: String, parameters: MutableMap<String, String>): Stack? {
-        logger.info("Start stack: $name")
+        logger.info("Create stack: $name", template, parameters)
 
         val client = getClient()
 
@@ -213,21 +234,16 @@ class OpenStackService(
                         logger.info("Verifying stack status", stack, stack.status)
                         if (stack.status == StackStatus.CREATE_COMPLETE.name) {
                             logger.info("Stack CREATE complete")
-//                            JobsControl.update.call(JobsControlUpdateRequest(
-//                              noget med ip her!!??
-//                            ), client).orThrow()
-                            JobsControl.update.call(
-                                JobsControlUpdateRequest(
-                                    listOf(
-                                        JobsControlUpdateRequestItem(
-                                            job.id,
-                                            JobState.RUNNING,
-                                            "Stack CREATE complete"
-                                        )
-                                    )
-                                ),
-                                client
-                            ).orThrow()
+                            val outputIP = stack.outputs.find { it["output_key"] == "server_ip" }
+                            if (!outputIP.isNullOrEmpty()) {
+                                sendJobStatusMessage(job.id, JobState.RUNNING,
+                                    MessageFormat.format(messages.jobs.createComplete, outputIP["output_value"]))
+                            } else {
+                                logger.error("Did not receive IP output from openstack", job, stack)
+                                sendJobStatusMessage(job.id, JobState.FAILURE,
+                                    MessageFormat.format(messages.jobs.createFailed))
+                            }
+
                             return@execute
                         }
                     }
@@ -237,7 +253,21 @@ class OpenStackService(
                 }
             }
         }
+    }
 
+    fun sendJobStatusMessage(jobId: String, state: JobState, message: String) {
+        JobsControl.update.call(
+            JobsControlUpdateRequest(
+                listOf(
+                    JobsControlUpdateRequestItem(
+                        jobId,
+                        state,
+                        message
+                    )
+                )
+            ),
+            client
+        ).orThrow()
     }
 
     fun getStackEvents(stackName: String, stackIdentity: String): MutableList<out Event>? {
@@ -263,6 +293,7 @@ class OpenStackService(
             }
         } else {
             logger.info("Stack not found: $stackIdentity")
+            // Maybe dont throw exception here?
             throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stack not found")
         }
     }

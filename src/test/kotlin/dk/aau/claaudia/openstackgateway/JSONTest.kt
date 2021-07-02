@@ -32,7 +32,7 @@
 //    @Test
 //    @Throws(Exception::class)
 //    fun testDeserialize() {
-//        val jobJSON = ClassPathResource("job.json").file.readBytes()
+//        val jobJSON = ClassPathResource("jobs.json").file.readBytes()
 //        val job: Job = json!!.parse(jobJSON).getObject()
 //
 //        assertThat(job.id).isEqualTo("string")

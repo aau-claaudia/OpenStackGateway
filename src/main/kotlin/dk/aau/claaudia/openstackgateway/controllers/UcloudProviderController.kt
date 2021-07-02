@@ -1,6 +1,7 @@
 package dk.aau.claaudia.openstackgateway.controllers
 
 
+import dk.aau.claaudia.openstackgateway.config.ProviderProperties
 import dk.aau.claaudia.openstackgateway.services.OpenStackService
 import dk.sdu.cloud.CommonErrorMessage
 import dk.sdu.cloud.accounting.api.ProductReference
@@ -24,14 +25,15 @@ import kotlin.collections.HashMap
 class SimpleCompute(
     private val client: UCloudClient,
     private val openstackService: OpenStackService,
-    wsDispatcher: UCloudWsDispatcher
-) : JobsController(PROVIDER_ID, wsDispatcher) {
+    wsDispatcher: UCloudWsDispatcher,
+    private val provider: ProviderProperties,
+) : JobsController(provider.id, wsDispatcher) {
     init {
         log.info("Simple compute init")
     }
 
     override fun create(request: BulkRequest<Job>) {
-        log.info("Creating some stacks: $request")
+        log.info("Creating stacks: $request")
         openstackService.createStacks(request.items)
 
         log.info("Waiting for stacks to start: $request")
@@ -39,9 +41,10 @@ class SimpleCompute(
     }
 
     override fun delete(request: BulkRequest<Job>) {
-        log.info("Deleting some jobs: $request")
-
+        log.info("Deleting jobs: $request")
         openstackService.deleteStacks(request.items)
+
+        log.info("Waiting for stacks to start: $request")
         openstackService.monitorStackDeletions(request.items)
     }
 
@@ -98,29 +101,42 @@ class SimpleCompute(
     override fun openInteractiveSession(
         request: BulkRequest<JobsProviderOpenInteractiveSessionRequestItem>,
     ): JobsProviderOpenInteractiveSessionResponse {
-        log.info("open interactive session $request")
-        TODO()
+        log.info("open interactive session", request)
+        val sessions: MutableList<OpenSession> = mutableListOf()
+        // Use map here
+        for (item in request.items) {
+            sessions.add(OpenSession.Web(item.job.id, 4, "a"))
+        }
+        return JobsProviderOpenInteractiveSessionResponse(sessions)
+        //TODO()
     }
-
-    private val knownProducts = listOf(
-        //ProductReference("standard1", "standard", PROVIDER_ID),
-        ProductReference("ucloud_taste", "standard", PROVIDER_ID),
-    )
 
     override fun retrieveProducts(request: Unit): JobsProviderRetrieveProductsResponse {
         log.info("Retrieving products")
+
         return JobsProviderRetrieveProductsResponse(
-            knownProducts.map { productRef ->
+            provider.products.map { product ->
                 ComputeProductSupport(
-                    productRef,
+                    ProductReference(product.id, product.category, provider.id),
                     ComputeSupport(
                         ComputeSupport.Docker(
-                            enabled = false,
+                            enabled = product.support.docker.enabled,
+                            web = product.support.docker.web,
+                            vnc = product.support.docker.vnc,
+                            logs = product.support.docker.logs,
+                            terminal = product.support.docker.terminal,
+                            peers = product.support.docker.peers,
+                            timeExtension = product.support.docker.timeExtension,
+                            utilization = product.support.docker.utilization
                         ),
                         ComputeSupport.VirtualMachine(
-                            enabled = true,
-                            logs = true,
-                            vnc = false
+                            enabled = product.support.virtualMachine.enabled,
+                            logs = product.support.virtualMachine.logs,
+                            vnc = product.support.virtualMachine.vnc,
+                            terminal = product.support.virtualMachine.terminal,
+                            suspension = product.support.virtualMachine.suspension,
+                            timeExtension = product.support.virtualMachine.timeExtension,
+                            utilization = product.support.virtualMachine.utilization
                         )
                     )
                 )
@@ -142,7 +158,6 @@ class SimpleCompute(
     }
 
     companion object : Loggable {
-        const val PROVIDER_ID = "aau3"
         override val log = logger()
     }
 }

@@ -1,5 +1,6 @@
 package dk.aau.claaudia.openstackgateway.controllers
 
+import dk.aau.claaudia.openstackgateway.models.StackStatus
 import io.swagger.v3.oas.annotations.Hidden
 import org.springframework.context.annotation.Primary
 import org.springframework.web.bind.annotation.*
@@ -21,6 +22,11 @@ class HomeController() {
 
     @GetMapping("/nogettest")
     fun indexTest(): String {
+        return "Dette er bare test"
+    }
+
+    @PostMapping("/nogettest")
+    fun indexTest(status: StackStatus): String {
         return "Dette er bare test"
     }
 }
