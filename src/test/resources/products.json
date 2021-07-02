@@ -1,0 +1,88 @@
+{
+  "products": [
+    {
+      "product": {
+        "id": "small 8GB",
+        "category": "standard",
+        "provider": "testcenter"
+      },
+      "support": {
+        "docker": {
+          "enabled": false,
+          "logs": null,
+          "web": null,
+          "vnc": null,
+          "terminal": null,
+          "peers": null,
+          "timeExtension": null,
+          "utilization": null
+        },
+        "virtualMachine": {
+          "enabled": true,
+          "logs": null,
+          "vnc": null,
+          "terminal": null,
+          "timeExtension": null,
+          "suspension": null,
+          "utilization": null
+        }
+      }
+    },
+    {
+      "product": {
+        "id": "medium 16GB",
+        "category": "standard",
+        "provider": "testcenter"
+      },
+      "support": {
+        "docker": {
+          "enabled": false,
+          "logs": null,
+          "web": null,
+          "vnc": null,
+          "terminal": null,
+          "peers": null,
+          "timeExtension": null,
+          "utilization": null
+        },
+        "virtualMachine": {
+          "enabled": true,
+          "logs": null,
+          "vnc": null,
+          "terminal": null,
+          "timeExtension": null,
+          "suspension": null,
+          "utilization": null
+        }
+      }
+    },
+    {
+      "product": {
+        "id": "large 32GB",
+        "category": "standard",
+        "provider": "testcenter"
+      },
+      "support": {
+        "docker": {
+          "enabled": false,
+          "logs": null,
+          "web": null,
+          "vnc": null,
+          "terminal": null,
+          "peers": null,
+          "timeExtension": null,
+          "utilization": null
+        },
+        "virtualMachine": {
+          "enabled": true,
+          "logs": null,
+          "vnc": null,
+          "terminal": null,
+          "timeExtension": null,
+          "suspension": null,
+          "utilization": null
+        }
+      }
+    }
+  ]
+}

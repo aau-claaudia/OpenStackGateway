@@ -65,7 +65,6 @@ repositories {
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-webflux:2.4.2")
-    //implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.cloud:spring-cloud-starter-config:3.0.1")
     implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.0.1")
     implementation("com.auth0:java-jwt:3.12.1")
@@ -76,7 +75,7 @@ dependencies {
     implementation("com.github.openstack4j.core:openstack4j-core:$openstack4jVersion")
     implementation("com.github.openstack4j.core.connectors:openstack4j-httpclient:$openstack4jVersion")
 
-    implementation("dk.sdu.cloud:jvm-provider-support:2021.1.5")
+    implementation("dk.sdu.cloud:jvm-provider-support-jvm:2021.2.0-storage0")
     implementation("com.squareup.okhttp3:okhttp:4.6.0")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
 

@@ -4,3 +4,11 @@
 #    org:
 #      springframework: DEBUG
 
+logging:
+  level:
+    org:
+      springframework:
+        web:
+          filter:
+            CommonsRequestLoggingFilter: trace
+
