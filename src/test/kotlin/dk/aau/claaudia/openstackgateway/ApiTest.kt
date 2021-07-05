@@ -4,8 +4,13 @@ import com.ninjasquad.springmockk.MockkBean
 import dk.aau.claaudia.openstackgateway.services.OpenStackService
 import dk.aau.claaudia.openstackgateway.services.TemplateService
 import dk.sdu.cloud.providers.UCloudClient
+import io.mockk.every
 //import dk.aau.claaudia.openstackgateway.services.UCloudService
 import org.junit.jupiter.api.Test
+import org.openstack4j.api.Builders
+import org.openstack4j.model.heat.Stack
+import org.openstack4j.model.heat.Template
+import org.openstack4j.openstack.common.GenericLink
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.core.io.ClassPathResource
@@ -79,7 +84,65 @@ class HttpControllersTests(@Autowired val mockMvc: MockMvc) {
         // Do something like this to mock service call
         //val template1 = Template("Template1", "Content of template 1")
 
-        //every { templateRepository.findByName(template1.name) } returns template1
+        //override fun onLocationMeasured(location: Location) { ... }
+
+        val stack = object : Stack {
+            override fun getId(): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun getName(): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun getStatus(): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun getStackStatusReason(): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun getDescription(): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun getTemplateDescription(): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun getTimeoutMins(): Long {
+                TODO("Not yet implemented")
+            }
+
+            override fun getOutputs(): MutableList<MutableMap<String, Any>> {
+                TODO("Not yet implemented")
+            }
+
+            override fun getParameters(): MutableMap<String, String> {
+                TODO("Not yet implemented")
+            }
+
+            override fun getCreationTime(): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun getLinks(): MutableList<GenericLink> {
+                TODO("Not yet implemented")
+            }
+
+            override fun getUpdatedTime(): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun getTags(): MutableList<String> {
+                TODO("Not yet implemented")
+            }
+
+        }
+
+        every { openStackService.createStacks(any())} returns mutableListOf(stack)
+        every { openStackService.monitorStackCreations(any())} returns Unit
 
         val jobJSON = ClassPathResource("jobs.json").file.readText()
 
