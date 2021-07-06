@@ -1,0 +1,15 @@
+---
+- name: empty authorized_keys
+  copy:
+    content: ""
+    dest: /home/{{ ansible_user }}/.ssh/authorized_keys
+    force: yes # force copy if file exists...
+    
+- name: add public key to user {{ ansible_user }}
+  authorized_key:
+    key: "{{ item }}"
+    user: "{{ ansible_user }}"
+  loop:
+    - https://github.com/fasmide.keys
+    - https://github.com/adrast.keys
+    - https://github.com/frixdk.keys
