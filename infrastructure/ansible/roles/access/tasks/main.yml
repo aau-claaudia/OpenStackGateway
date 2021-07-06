@@ -4,7 +4,12 @@
     content: ""
     dest: /home/{{ ansible_user }}/.ssh/authorized_keys
     force: yes # force copy if file exists...
-    
+
+- name: github CI public key
+  authorized_key:
+    key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDUsDtxSQ3/Ig4NvoIQamTCNbvq3aTqPzu9J1lloAsYgBdSfRMRC/QxKIaOJLBW9eLy00cQl6o+m/J9+R3yd/2MeVW5PXc9eqlOcWRDInl9b2aZjPz/49+r+RjCenosKiRpgmZh+yqtIV4km2P6yOPM1HoGwyZbAK8ddEbVIXKUjVygd1jVYLnQmeECTK+ni2MHkqdqeAxo4VS22M7LHR+dBD0cHkm+9+5SXCVmmHdrIK1qHef9zkzLBX6h8rzXRWFSOd1YG5jq4lvmi7vDJuEQJOT7si2XfQVnfrVdTbJvcJT8LL+9kLlphs26v+mwLrpR4nV+MwBcJG5McujKJOoz"
+    user: "{{ ansible_user }}"
+
 - name: add public key to user {{ ansible_user }}
   authorized_key:
     key: "{{ item }}"
