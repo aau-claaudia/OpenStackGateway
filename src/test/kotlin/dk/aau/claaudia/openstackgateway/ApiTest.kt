@@ -3,6 +3,7 @@ package dk.aau.claaudia.openstackgateway
 import com.ninjasquad.springmockk.MockkBean
 import dk.aau.claaudia.openstackgateway.services.OpenStackService
 import dk.aau.claaudia.openstackgateway.services.TemplateService
+import dk.aau.claaudia.openstackgateway.tasks.Jobs
 import dk.sdu.cloud.providers.UCloudClient
 import io.mockk.every
 //import dk.aau.claaudia.openstackgateway.services.UCloudService
@@ -12,9 +13,12 @@ import org.openstack4j.model.heat.Stack
 import org.openstack4j.model.heat.Template
 import org.openstack4j.openstack.common.GenericLink
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.boot.task.TaskSchedulerBuilder
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.core.io.ClassPathResource
 import org.springframework.http.HttpHeaders
+import org.springframework.scheduling.TaskScheduler
 import org.springframework.test.context.ActiveProfiles
 
 import org.springframework.test.web.servlet.MockMvc
@@ -36,6 +40,13 @@ class HttpControllersTests(@Autowired val mockMvc: MockMvc) {
 
     @MockkBean
     private lateinit var ucloudService: UCloudClient
+
+    @Qualifier("taskscheduler")
+    @MockkBean
+    lateinit var task: TaskScheduler
+
+    @MockkBean
+    lateinit var job: Jobs
 
     //Find a way to test without getting tokens from ucloud?
 //    private val authHeader =
