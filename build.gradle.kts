@@ -1,6 +1,6 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-val openstack4jVersion = "3.8"
+val openstack4jVersion = "3.10"
 val jacksonVersion = "2.12.0"
 val kotlinVersion = "1.4.20"
 

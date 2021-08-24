@@ -1,14 +1,9 @@
 package dk.aau.claaudia.openstackgateway
 
-import dk.aau.claaudia.openstackgateway.config.OpenStackProperties
-import dk.aau.claaudia.openstackgateway.config.ProviderProperties
-import dk.aau.claaudia.openstackgateway.config.UCloudProperties
-import dk.aau.claaudia.openstackgateway.config.Messages
-//import dk.sdu.cloud.providers.UCloudClient
+import dk.aau.claaudia.openstackgateway.config.*
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.runApplication
-import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
 
 @SpringBootApplication

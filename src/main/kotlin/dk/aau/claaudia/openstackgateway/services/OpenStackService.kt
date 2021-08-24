@@ -1,5 +1,6 @@
 package dk.aau.claaudia.openstackgateway.services
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dk.aau.claaudia.openstackgateway.config.Messages
 import dk.aau.claaudia.openstackgateway.config.OpenStackProperties
 import dk.aau.claaudia.openstackgateway.config.ProviderProperties
@@ -7,6 +8,7 @@ import dk.aau.claaudia.openstackgateway.extensions.getLogger
 import dk.aau.claaudia.openstackgateway.models.StackStatus
 import dk.sdu.cloud.app.orchestrator.api.*
 import dk.sdu.cloud.app.store.api.AppParameterValue
+import dk.sdu.cloud.app.store.api.SimpleDuration
 
 
 import dk.sdu.cloud.calls.client.orThrow
@@ -29,8 +31,13 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import java.text.MessageFormat
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.Executors
+import kotlin.math.floor
 
 
 @Service
@@ -110,7 +117,7 @@ class OpenStackService(
         return client.imagesV2().list()
     }
 
-    fun mapImage(id: String): Image? {
+    fun getImage(id: String?): Image? {
         val img = getClient().imagesV2().get(id)
         logger.info("image, $img")
         return img
@@ -193,6 +200,13 @@ class OpenStackService(
                 throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing parameters: $missingParameters")
             }
 
+            // Verify flavor
+            val image = getImage(parameters["image"])
+
+            // Verify image exists
+
+            // Verify security group exists
+
             val createStack = createStack(job.id, template.templateJson, parameters)
             createdStacks.add(createStack)
         }
@@ -217,7 +231,7 @@ class OpenStackService(
         client.heat().stacks().create(build)
         //The stack returned by create only has id and href
         //But I guess this only returns a 200
-        return getStack(prefixStackName(name))
+        return getStack(name)
     }
 
     private val threadPool = Executors.newCachedThreadPool()
@@ -231,7 +245,7 @@ class OpenStackService(
                 while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
                     val stack = getStack(job.id)
                     if (stack != null) {
-                        logger.info("Verifying stack status", stack, stack.status)
+                        logger.info("Monitoring stack status", stack, stack.status)
                         if (stack.status == StackStatus.CREATE_COMPLETE.name) {
                             logger.info("Stack CREATE complete")
                             val outputIP = stack.outputs.find { it["output_key"] == "server_ip" }
@@ -268,6 +282,100 @@ class OpenStackService(
             ),
             client
         ).orThrow()
+
+
+        // TESTING REMOVE
+//        val bab = JobsControl.retrieve.call(
+//            JobsControlRetrieveRequest("app", true, true, true, true, true),
+//            client
+//        ).orThrow()
+//
+//        bab.billing.creditsCharged
+//        bab.billing.pricePerUnit
+    }
+
+
+    fun chargeAllJobs() {
+        val client = getClient()
+
+        //val list = client.heat().stacks().list(mapOf("status" to "CREATE_COMPLETE,UPDATE_COMPLETE"))
+        val list = client.heat().stacks().list().filter { it.status in listOf("CREATE_COMPLETE", "UPDATE_COMPLETE") }
+        logger.info("list: ${list.size}")
+
+        list.forEach{ chargeJob(it) }
+    }
+
+    fun chargeJob(stack: Stack) {
+        //Send a charge request to ucloud. Duration is time since last charge
+
+        val chargeDateTime: Instant = Instant.now()
+        val lastChargedDateTime: Instant  = getLastChargedFromStack(stack)
+
+        val duration = Duration.between(lastChargedDateTime, chargeDateTime)
+
+        val simpleDuration = SimpleDuration(duration.toHours().toInt(),duration.toMinutesPart(),duration.toSecondsPart())
+
+        val response = JobsControl.chargeCredits.call(
+            JobsControlChargeCreditsRequest(
+                listOf(
+                    JobsControlChargeCreditsRequestItem(
+                        // Er det okay med prefix her? er chargedate okay som chargeId
+                        stack.name.removePrefix(config.stackPrefix), lastChargedDateTime.toString(), simpleDuration
+                    )
+                )
+            ),
+            client
+        ).orThrow()
+
+        // Handle
+        response.insufficientFunds
+
+        // Handle/ignore
+        response.duplicateCharges
+
+        // TODO Handle 404
+    }
+
+    fun getLastChargedFromStack(stack: Stack): Instant {
+        // FIXME Store lastcharged in database not openstack tags
+
+        val prefix = "lastcharged:"
+        val lastCharged = stack.tags.first { it.contains(prefix) }.removePrefix(prefix)
+
+        return if (lastCharged.isBlank()) {
+            // map to instant?
+            Instant.parse(stack.creationTime)
+        } else {
+            // Vi er ude i noget sovs her. vi skal have rigtige datetimes i en database
+
+            Instant.parse(lastCharged)
+        }
+    }
+
+    fun updateStackLastCharged(stack: Stack, chargedAt: Instant) {
+        // FIXME Store in database not openstack tags
+        val client = getClient()
+        val templateAsMap = client.heat().templates().getTemplateAsMap(stack.name)
+        val jsonStr = jacksonObjectMapper().writeValueAsString(templateAsMap)
+
+        stack.parameters.remove("OS::stack_id")
+        stack.parameters.remove("OS::stack_name")
+        stack.parameters.remove("OS::project_id")
+
+        val stackUpdate = Builders.stackUpdate()
+            .tags("lastcharged:$chargedAt")
+            .template(jsonStr)
+            .parameters(stack.parameters)
+            .build()
+
+        val update = client.heat().stacks().update(stack.name, stack.id, stackUpdate)
+
+        if (update.isSuccess) {
+            logger.info("Stack lastcharged timestamp updated", stack)
+        } else {
+            logger.error("Stack lastcharged timestamp could no be updated", stack)
+        }
+
     }
 
     fun getStackEvents(stackName: String, stackIdentity: String): MutableList<out Event>? {
@@ -294,7 +402,7 @@ class OpenStackService(
         } else {
             logger.info("Stack not found: $stackIdentity")
             // Maybe dont throw exception here?
-            throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stack not found")
+            //throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stack not found")
         }
     }
 
@@ -308,33 +416,61 @@ class OpenStackService(
                     val stack = getStack(job.id)
                     if (stack == null) {
                         logger.info("Could not find stack. Assume deleted", stack)
-                        JobsControl.update.call(
-                            JobsControlUpdateRequest(
-                                listOf(
-                                    JobsControlUpdateRequestItem(
-                                        job.id,
-                                        JobState.SUCCESS,
-                                        "Stack DELETE complete"
-                                    )
-                                )
-                            ),
-                            client
-                        ).orThrow()
+                        sendJobStatusMessage(job.id, JobState.SUCCESS, "Stack DELETE complete")
                         return@execute
 
                     }
-                    logger.info("Stack found complete", stack)
+                    logger.info("Stack was found and not yet deleted", stack)
                     // Sleep until next retry
                     logger.info("Waiting to retry")
                     Thread.sleep(config.monitor.delay)
                 }
             }
         }
-
     }
 
-    fun verifyStack(stackId: String) {
-        val client = getClient()
+    fun verifyJobs(jobs: List<Job>) {
+        for (job in jobs) {
+            verifyJob(job)
+        }
+    }
+
+    fun verifyJob(job: Job) {
+        val stack = getStack(job.id)
+
+        if (stack == null) {
+            logger.info("Could not find stack. Assume deleted", job, stack)
+            sendJobStatusMessage(job.id, JobState.SUCCESS, "Stack was deleted")
+            return
+        }
+
+        // Move this to config?
+        val statusMappings = mapOf<StackStatus, JobState>(
+            StackStatus.CREATE_COMPLETE to JobState.RUNNING,
+            StackStatus.CREATE_IN_PROGRESS to JobState.IN_QUEUE,
+            StackStatus.CREATE_FAILED to JobState.FAILURE
+        )
+
+        val expectedJobState = statusMappings[StackStatus.valueOf(stack.status)]
+
+        when {
+            expectedJobState == null -> {
+                // StatusMappings should be expanded to avoid this
+                logger.info("Unhandled status: ${stack.status}", job, stack)
+                sendJobStatusMessage(
+                    job.id, JobState.RUNNING,
+                    "ERROR, Unknown status: ${job.currentState.name}")
+            }
+            job.currentState.name == expectedJobState.name -> {
+                // Status in ucloud is not as expected. Send update.
+                logger.info("Job status not as expected, updating ucloud: ${stack.status}", job, stack)
+                sendJobStatusMessage(job.id, expectedJobState, "Stack status: ${stack.status}")
+            }
+            else -> {
+                logger.info("Status verified: ${stack.status}", job, stack)
+            }
+        }
+
     }
 
     fun listVolumes(): List<Volume> {

@@ -44,7 +44,7 @@ class SimpleCompute(
         log.info("Deleting jobs: $request")
         openstackService.deleteStacks(request.items)
 
-        log.info("Waiting for stacks to start: $request")
+        log.info("Waiting for stacks to be deleted: $request")
         openstackService.monitorStackDeletions(request.items)
     }
 
@@ -59,6 +59,7 @@ class SimpleCompute(
             }),
             client
         ).orThrow()
+
     }
 
     private val threadPool = Executors.newCachedThreadPool()
@@ -155,6 +156,7 @@ class SimpleCompute(
 
     override fun verify(request: BulkRequest<Job>) {
         log.info("verify jobs: $request")
+        openstackService.verifyJobs(request.items)
     }
 
     companion object : Loggable {
