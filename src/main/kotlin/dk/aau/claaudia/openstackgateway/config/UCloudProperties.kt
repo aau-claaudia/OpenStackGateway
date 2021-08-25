@@ -28,7 +28,7 @@ data class UCloudProperties(
 
 //This adds an additional interceptor but cannot remove the one from the providerlibrary
 @Configuration
-@Profile("prod", "dev", "local")
+@Profile("prod", "test", "dev", "local")
 class UCloudSpringConfigTest(
     private val interceptor: UCloudAuthInterceptor,
     private val requestInterceptor: UcloudRequestInterceptor
