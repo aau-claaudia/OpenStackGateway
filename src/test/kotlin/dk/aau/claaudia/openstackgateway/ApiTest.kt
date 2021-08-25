@@ -29,7 +29,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.util.Base64Utils
 
 @WebMvcTest
-@ActiveProfiles("test")
+@ActiveProfiles("unittest")
 class HttpControllersTests(@Autowired val mockMvc: MockMvc) {
 
     @MockkBean
