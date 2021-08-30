@@ -115,7 +115,7 @@ class SimpleCompute(
     override fun retrieveProducts(request: Unit): JobsProviderRetrieveProductsResponse {
         log.info("Retrieving products")
 
-        return JobsProviderRetrieveProductsResponse(
+        val response = JobsProviderRetrieveProductsResponse(
             provider.products.map { product ->
                 ComputeProductSupport(
                     ProductReference(product.id, product.category, provider.id),
@@ -143,6 +143,8 @@ class SimpleCompute(
                 )
             }
         )
+        logger().info(response.toString())
+        return response
     }
 
     override fun retrieveUtilization(request: Unit): JobsProviderUtilizationResponse {
