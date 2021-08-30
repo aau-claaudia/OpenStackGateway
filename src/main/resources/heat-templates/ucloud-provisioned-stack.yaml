@@ -28,7 +28,7 @@ parameters:
   username:
     type: string
     default: ucloud
-  public_ssh_keys:
+  pubKey:
     type: comma_delimited_list
   key_name:
     type: string
