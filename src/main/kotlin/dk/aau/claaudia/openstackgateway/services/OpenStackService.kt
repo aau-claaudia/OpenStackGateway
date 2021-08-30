@@ -196,6 +196,8 @@ class OpenStackService(
             // Verify template required parameters are present
             val missingParameters: List<String> = templateService.findMissingParameters(template, parameters)
             if (missingParameters.isNotEmpty()) {
+                logger.error("Received parameters: $parameters")
+                logger.error("Excepted parameters: ${template.templateJson}")
                 logger.error("Missing parameters: $missingParameters")
                 throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing parameters: $missingParameters")
             }
