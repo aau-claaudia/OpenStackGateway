@@ -9,8 +9,6 @@ import dk.aau.claaudia.openstackgateway.models.StackStatus
 import dk.sdu.cloud.app.orchestrator.api.*
 import dk.sdu.cloud.app.store.api.AppParameterValue
 import dk.sdu.cloud.app.store.api.SimpleDuration
-
-
 import dk.sdu.cloud.calls.client.orThrow
 import dk.sdu.cloud.providers.UCloudClient
 import dk.sdu.cloud.providers.call
@@ -33,12 +31,8 @@ import org.springframework.web.server.ResponseStatusException
 import java.text.MessageFormat
 import java.time.Duration
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.Executors
-import kotlin.math.floor
-
 
 @Service
 class OpenStackService(
@@ -122,10 +116,6 @@ class OpenStackService(
         logger.info("image, $img")
         return img
     }
-
-//    fun listTemplates(): List<Template?> {
-//        return getClient().heat().templates(
-//    }
 
     fun listStacks(): List<Stack> {
         return getClient().heat().stacks().list()
@@ -284,18 +274,16 @@ class OpenStackService(
             ),
             client
         ).orThrow()
-
-
-        // TESTING REMOVE
-//        val bab = JobsControl.retrieve.call(
-//            JobsControlRetrieveRequest("app", true, true, true, true, true),
-//            client
-//        ).orThrow()
-//
-//        bab.billing.creditsCharged
-//        bab.billing.pricePerUnit
     }
 
+    //TEST REMOVE ME:
+    fun getAllStacks(){
+        val client = getClient()
+        val list = client.heat().stacks().list().filter { it.status in listOf("CREATE_COMPLETE", "UPDATE_COMPLETE") }
+        list.forEach{
+            logger.info(it.tags.joinToString())
+        }
+    }
 
     fun chargeAllJobs() {
         val client = getClient()
@@ -304,17 +292,23 @@ class OpenStackService(
         val list = client.heat().stacks().list().filter { it.status in listOf("CREATE_COMPLETE", "UPDATE_COMPLETE") }
         logger.info("list: ${list.size}")
 
-        list.forEach{ chargeJob(it) }
+        list.forEach{
+            val response = chargeJob(it)
+            if (response.insufficientFunds.contains(it.name.removePrefix(config.stackPrefix))) {
+                // Job could not be charged and should be shelved
+                logger.info("Stack ${it}. ucloud job has insufficient funds. $response")
+                // FIXME kill job
+            }
+        }
     }
 
-    fun chargeJob(stack: Stack) {
+    fun chargeJob(stack: Stack): JobsControlChargeCreditsResponse {
         //Send a charge request to ucloud. Duration is time since last charge
 
-        val chargeDateTime: Instant = Instant.now()
-        val lastChargedDateTime: Instant  = getLastChargedFromStack(stack)
+        val chargeTime: Instant = Instant.now()
+        val lastChargedTime: Instant  = getLastChargedFromStack(stack)
 
-        val duration = Duration.between(lastChargedDateTime, chargeDateTime)
-
+        val duration = Duration.between(lastChargedTime, chargeTime)
         val simpleDuration = SimpleDuration(duration.toHours().toInt(),duration.toMinutesPart(),duration.toSecondsPart())
 
         val response = JobsControl.chargeCredits.call(
@@ -322,20 +316,22 @@ class OpenStackService(
                 listOf(
                     JobsControlChargeCreditsRequestItem(
                         // Er det okay med prefix her? er chargedate okay som chargeId
-                        stack.name.removePrefix(config.stackPrefix), lastChargedDateTime.toString(), simpleDuration
+                        stack.name.removePrefix(config.stackPrefix), lastChargedTime.toString(), simpleDuration
                     )
                 )
             ),
             client
         ).orThrow()
 
-        // Handle
-        response.insufficientFunds
+        if (response.insufficientFunds.isEmpty()) {
+            // Job was charged
+            logger.info("Stack ${stack}. ucloud job has been charged. $response")
+            // Update timestamp
+            updateStackLastCharged(stack, chargeTime)
+        }
 
-        // Handle/ignore
-        response.duplicateCharges
-
-        // TODO Handle 404
+        logger.info("Charge response:", response)
+        return response
     }
 
     fun getLastChargedFromStack(stack: Stack): Instant {
@@ -349,7 +345,6 @@ class OpenStackService(
             Instant.parse(stack.creationTime)
         } else {
             // Vi er ude i noget sovs her. vi skal have rigtige datetimes i en database
-
             Instant.parse(lastCharged)
         }
     }

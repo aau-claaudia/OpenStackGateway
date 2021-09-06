@@ -18,10 +18,9 @@ public class TemplateService(
     private val mapper: ObjectMapper
 ) {
 
+    // This list of templates could be expanded and maybe saved elsewhere
     val templates = mapOf(
-        //"simple-stack" to "/heat-templates/simple-stack.yaml",
         "ucloud" to "/heat-templates/ucloud-provisioned-stack.yaml"
-        //"user-data" to "/heat-templates/user-data.yaml"
     )
 
     fun getTemplate(name: String): Template {
@@ -30,22 +29,6 @@ public class TemplateService(
 
         return Builders.template().templateJson(template).build()
     }
-
-//    fun getUserParameters(ssh_key: String): Any {
-//        var template = this::class.java.getResource(templates["user-data"]).readText(Charsets.UTF_8)
-//        template = template.replace("SSHKEYREPLACE", ssh_key)
-//        // validateTemplate(template)
-//
-//        val tmp = Builders.template().templateJson(template).build()
-//        // val t: JsonTemplate = mapper.readValue(tmp.templateJson, JsonTemplate::class.java)
-//        return mapper.readValue(tmp.templateJson, Any::class.java)
-//    }
-//
-//    fun getHeatParameters(template: Template): Map<String, Any> {
-//        val tmp = Builders.template().templateJson(template.templateJson).build()
-//        val t: Map<*, *> = mapper.readValue(tmp.templateJson, Map::class.java)
-//        return t["parameters"] as Map<String, Any>
-//    }
 
     fun getTestTemplate(): Template {
         val template = this::class.java.getResource(templates["ucloud"]).readText(Charsets.UTF_8)
