@@ -26,21 +26,28 @@ class HomeController(
         return RedirectView("/swagger-ui.html")
     }
 
+//    @GetMapping("/nogettest")
+//    fun indexTest(): String {
+//        return "Dette er bare test"
+//    }
+
+//    @GetMapping("/charge/{name}")
+//    fun chargeTest(@PathVariable name: String): String {
+//        val stack = openstackService.getStack(name) ?: return "STACK NOT FOUND"
+//        openstackService.updateStackLastCharged(stack, Instant.now())
+//        openstackService.chargeJob(stack)
+//        return "charged!"
+//    }
+
+    @GetMapping("/charge/")
+    fun chargedTest(): String {
+        openstackService.chargeAllJobs()
+        return "charge all jobs!"
+    }
+
     @GetMapping("/nogettest")
     fun indexTest(): String {
-        return "Dette er bare test"
-    }
-
-    @GetMapping("/charge/{name}")
-    fun chargeTest(@PathVariable name: String): String {
-        val stack = openstackService.getStack(name) ?: return "STACK NOT FOUND"
-        openstackService.updateStackLastCharged(stack, Instant.now())
-        openstackService.chargeJob(stack)
-        return "charged!"
-    }
-
-    @PostMapping("/nogettest")
-    fun indexTest(@RequestBody status: StackStatus): String {
+        openstackService.getAllStacks()
         return "Dette er bare test"
     }
 }

@@ -58,7 +58,7 @@ resources:
             gecos: UCloud
             sudo: ALL=(ALL) NOPASSWD:ALL
             shell: /bin/bash
-            ssh-authorized-keys: { get_param: public_ssh_keys }
+            ssh-authorized-keys: { get_param: pubKey }
 
 outputs:
   server_ip:
