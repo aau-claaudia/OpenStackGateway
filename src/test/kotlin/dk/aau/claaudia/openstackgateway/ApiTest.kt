@@ -55,6 +55,9 @@ class HttpControllersTests(@Autowired val mockMvc: MockMvc) {
 
     @Test
     fun `Test test`() {
+
+        every { openStackService.getAllStacks()} returns Unit
+
         mockMvc.perform(
             get("/nogettest"))
             .andExpect(status().isOk)
