@@ -6,7 +6,7 @@ openstack:
     id: testtest
   endpoints:
     auth: https://test.test.test.test:5000/v3/
-  stackPrefix: ucloudtest
+  stackPrefix: ucloud-
   network: 2fa0bca2-6153-4753-a8e3-ddb588d29436
   securityGroup: 50492808-5eb0-4a49-a6fd-163740a44f9d
   keyName: root_openstack-master01
