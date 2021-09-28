@@ -8,16 +8,12 @@ import dk.sdu.cloud.providers.UCloudClient
 import io.mockk.every
 //import dk.aau.claaudia.openstackgateway.services.UCloudService
 import org.junit.jupiter.api.Test
-import org.openstack4j.api.Builders
 import org.openstack4j.model.heat.Stack
-import org.openstack4j.model.heat.Template
 import org.openstack4j.openstack.common.GenericLink
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.boot.task.TaskSchedulerBuilder
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.core.io.ClassPathResource
-import org.springframework.http.HttpHeaders
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.test.context.ActiveProfiles
 
@@ -26,7 +22,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import org.springframework.util.Base64Utils
 
 @WebMvcTest
 @ActiveProfiles("unittest")
@@ -152,11 +147,10 @@ class HttpControllersTests(@Autowired val mockMvc: MockMvc) {
             override fun getTags(): MutableList<String> {
                 TODO("Not yet implemented")
             }
-
         }
 
-        every { openStackService.createStacks(any())} returns mutableListOf(stack)
-        every { openStackService.monitorStackCreations(any())} returns Unit
+        every { openStackService.createStacks(any())} returns Unit
+        every { openStackService.sendStatusWhenStackComplete(any())} returns Unit
 
         val jobJSON = ClassPathResource("jobs.json").file.readText()
 

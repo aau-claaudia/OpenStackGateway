@@ -5,6 +5,8 @@ import dk.aau.claaudia.openstackgateway.config.Messages
 import dk.aau.claaudia.openstackgateway.config.OpenStackProperties
 import dk.aau.claaudia.openstackgateway.config.ProviderProperties
 import dk.aau.claaudia.openstackgateway.extensions.getLogger
+import dk.aau.claaudia.openstackgateway.extensions.openstackName
+import dk.aau.claaudia.openstackgateway.extensions.ucloudId
 import dk.aau.claaudia.openstackgateway.models.StackStatus
 import dk.sdu.cloud.app.orchestrator.api.*
 import dk.sdu.cloud.app.store.api.AppParameterValue
@@ -12,6 +14,7 @@ import dk.sdu.cloud.app.store.api.SimpleDuration
 import dk.sdu.cloud.calls.client.orThrow
 import dk.sdu.cloud.providers.UCloudClient
 import dk.sdu.cloud.providers.call
+import io.ktor.http.*
 import org.openstack4j.api.Builders
 import org.openstack4j.api.OSClient.OSClientV3
 import org.openstack4j.model.common.Identifier
@@ -19,6 +22,7 @@ import org.openstack4j.model.compute.Flavor
 import org.openstack4j.model.compute.Server
 import org.openstack4j.model.heat.Event
 import org.openstack4j.model.heat.Stack
+import org.openstack4j.model.heat.Template
 import org.openstack4j.model.identity.v3.Token
 import org.openstack4j.model.identity.v3.User
 import org.openstack4j.model.image.v2.Image
@@ -40,12 +44,14 @@ class OpenStackService(
     private val provider: ProviderProperties,
     private val messages: Messages,
     private val templateService: TemplateService,
-    private val client: UCloudClient
+    private val uCloudClient: UCloudClient
 ) {
     private val domainIdentifier = Identifier.byId("default")
     private val projectIdentifier = Identifier.byId(config.project.id)
     private var token: Token? = null
     private fun Token.hasExpired(): Boolean = expires.before(Date())
+
+    private val threadPool = Executors.newCachedThreadPool()
 
     private fun getClient(): OSClientV3 {
         //OSFactory.enableHttpLoggingFilter(true)
@@ -71,7 +77,7 @@ class OpenStackService(
     }
 
     private fun prefixStackName(ucloudJobId: String): String {
-        return "${config.stackPrefix}-${ucloudJobId}"
+        return "${config.stackPrefix}${ucloudJobId}"
     }
 
     fun test(): String {
@@ -113,16 +119,32 @@ class OpenStackService(
 
     fun getImage(id: String?): Image? {
         val img = getClient().imagesV2().get(id)
-        logger.info("image, $img")
+        logger.info("image: $img")
         return img
+    }
+
+    fun getFlavorById(id: String?): Flavor? {
+        val flavor = getClient().compute().flavors().get(id)
+        logger.info("flavor by id: $flavor")
+        return flavor
+    }
+
+    fun getFlavorByName(name: String?): Flavor? {
+        val flavor = getClient().compute().flavors().list().first{ it.name == name}
+        logger.info("flavor by name: $flavor")
+        return flavor
     }
 
     fun listStacks(): List<Stack> {
         return getClient().heat().stacks().list()
     }
 
-    fun getStack(name: String): Stack? {
+    fun getStackOld(name: String): Stack? {
         return getClient().heat().stacks().getStackByName(prefixStackName(name))
+    }
+
+    fun getStackByName(name: String): Stack? {
+        return getClient().heat().stacks().getStackByName(name)
     }
 
     fun mapImage(name: String, version: String): String {
@@ -173,36 +195,56 @@ class OpenStackService(
         return parameters
     }
 
-    fun createStacks(jobs: List<Job>): MutableList<Stack?> {
+    fun createStacks(jobs: List<Job>){
         logger.info("creating stacks: $jobs.size")
 
+        // There is only one template for now
         val template = templateService.getTemplate("ucloud")
 
-        val createdStacks = mutableListOf<Stack?>()
-
         for (job in jobs) {
-            val parameters = prepareParameters(job)
+            // Starts a thread for each job
+            asyncStackCreation(job, template)
+        }
+    }
 
-            // Verify template required parameters are present
-            val missingParameters: List<String> = templateService.findMissingParameters(template, parameters)
-            if (missingParameters.isNotEmpty()) {
-                logger.error("Received parameters: $parameters")
-                logger.error("Excepted parameters: ${template.templateJson}")
-                logger.error("Missing parameters: $missingParameters")
-                throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing parameters: $missingParameters")
+    fun asyncStackCreation(job: Job, template: Template) {
+        threadPool.execute {
+            // Try to create the stack and report any errors to ucloud
+            try {
+                val parameters = prepareParameters(job)
+
+                // Verify template required parameters are present
+                val missingParameters: List<String> = templateService.findMissingParameters(template, parameters)
+                if (missingParameters.isNotEmpty()) {
+                    logger.error("Received parameters: $parameters")
+                    logger.error("Excepted parameters: ${template.templateJson}")
+                    logger.error("Missing parameters: $missingParameters")
+                    throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing parameters: $missingParameters")
+                }
+
+                // Verify flavor exists
+                getFlavorByName(parameters["flavor"])
+                    ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Flavor not found: ${parameters["flavor"]}")
+
+                // Verify image exists
+                getImage(parameters["image"])
+                    ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Image not found: ${parameters["image"]}")
+
+                // TODO Verify security group exists
+
+                // Send stack creation to openstack
+                createStack(job.id, template.templateJson, parameters)
+            } catch (e: Exception) {
+                // Send message to ucloud
+                sendJobStatusMessage(job.id, JobState.FAILURE,
+                    MessageFormat.format(messages.jobs.createFailed)
+                )
+                // Raise exception for logging
+                throw e
             }
 
-            // Verify flavor
-            val image = getImage(parameters["image"])
-
-            // Verify image exists
-
-            // Verify security group exists
-
-            val createStack = createStack(job.id, template.templateJson, parameters)
-            createdStacks.add(createStack)
+            return@execute
         }
-        return createdStacks
     }
 
     fun createStack(name: String, template: String, parameters: MutableMap<String, String>): Stack? {
@@ -220,38 +262,34 @@ class OpenStackService(
         // TODO Consider passing parameters as a file
         //Builders.stack().files(mutableMapOf("file1" to "file contents"))
 
-        client.heat().stacks().create(build)
+        val created = client.heat().stacks().create(build)
         //The stack returned by create only has id and href
         //But I guess this only returns a 200
-        return getStack(name)
+        return getStackByName(created.name)
     }
 
-    private val threadPool = Executors.newCachedThreadPool()
-
-    fun monitorStackCreations(jobs: List<Job>) {
+    fun sendStatusWhenStackComplete(jobs: List<Job>) {
         Thread.sleep(5000) // TODO Status is not set if we change this too quickly (https://github.com/SDU-eScience/UCloud/issues/2303)
 
         for (job in jobs) {
             threadPool.execute {
                 val startTime = System.currentTimeMillis()
                 while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
-                    val stack = getStack(job.id)
-                    if (stack != null) {
-                        logger.info("Monitoring stack status", stack, stack.status)
-                        if (stack.status == StackStatus.CREATE_COMPLETE.name) {
-                            logger.info("Stack CREATE complete")
-                            val outputIP = stack.outputs.find { it["output_key"] == "server_ip" }
-                            if (!outputIP.isNullOrEmpty()) {
-                                sendJobStatusMessage(job.id, JobState.RUNNING,
-                                    MessageFormat.format(messages.jobs.createComplete, outputIP["output_value"]))
-                            } else {
-                                logger.error("Did not receive IP output from openstack", job, stack)
-                                sendJobStatusMessage(job.id, JobState.FAILURE,
-                                    MessageFormat.format(messages.jobs.createFailed))
-                            }
-
-                            return@execute
+                    val stack = getStackByName(job.openstackName)
+                    logger.info("Monitoring stack status", stack, stack?.status)
+                    if (stack != null && stack.status == StackStatus.CREATE_COMPLETE.name) {
+                        logger.info("Stack CREATE complete")
+                        val outputIP = stack.outputs.find { it["output_key"] == "server_ip" }
+                        if (!outputIP.isNullOrEmpty()) {
+                            sendJobStatusMessage(job.id, JobState.RUNNING,
+                                MessageFormat.format(messages.jobs.createComplete, outputIP["output_value"]))
+                        } else {
+                            logger.error("Did not receive IP output from openstack", job, stack)
+                            sendJobStatusMessage(job.id, JobState.FAILURE,
+                                MessageFormat.format(messages.jobs.createFailed))
                         }
+
+                        return@execute
                     }
                     // Sleep until next retry
                     logger.info("Waiting to retry")
@@ -272,7 +310,7 @@ class OpenStackService(
                     )
                 )
             ),
-            client
+            uCloudClient
         ).orThrow()
     }
 
@@ -288,21 +326,24 @@ class OpenStackService(
     fun chargeAllJobs() {
         val client = getClient()
 
-        //val list = client.heat().stacks().list(mapOf("status" to "CREATE_COMPLETE,UPDATE_COMPLETE"))
         val list = client.heat().stacks().list().filter { it.status in listOf("CREATE_COMPLETE", "UPDATE_COMPLETE") }
         logger.info("list: ${list.size}")
 
         list.forEach{
-            val response = chargeJob(it)
-            if (response.insufficientFunds.contains(it.name.removePrefix(config.stackPrefix))) {
-                // Job could not be charged and should be shelved
-                logger.info("Stack ${it}. ucloud job has insufficient funds. $response")
-                // FIXME kill job
-            }
+            asyncChargeJob(it)
         }
     }
 
-    fun chargeJob(stack: Stack): JobsControlChargeCreditsResponse {
+    fun asyncChargeJob(stack: Stack) {
+        // TODO Make this asynchronous
+        val job = JobsControl.retrieve.call(JobsControlRetrieveRequest(stack.ucloudId), uCloudClient)
+        logger.info("Found job $job")
+
+        if (job.statusCode == HttpStatusCode.NotFound) {
+            logger.info("Job not found in ucloud. UcloudId: ${stack.ucloudId}")
+            return
+        }
+
         //Send a charge request to ucloud. Duration is time since last charge
 
         val chargeTime: Instant = Instant.now()
@@ -315,42 +356,56 @@ class OpenStackService(
             JobsControlChargeCreditsRequest(
                 listOf(
                     JobsControlChargeCreditsRequestItem(
-                        // Er det okay med prefix her? er chargedate okay som chargeId
-                        stack.name.removePrefix(config.stackPrefix), lastChargedTime.toString(), simpleDuration
+                        // Er chargedate okay som chargeId
+                        stack.ucloudId, lastChargedTime.toString(), simpleDuration
                     )
                 )
             ),
-            client
+            uCloudClient
         ).orThrow()
 
-        if (response.insufficientFunds.isEmpty()) {
-            // Job was charged
-            logger.info("Stack ${stack}. ucloud job has been charged. $response")
-            // Update timestamp
+        if (response.duplicateCharges.isEmpty() && response.duplicateCharges.isEmpty()) {
+            // Everything is good
+            logger.info("Stack ${stack}. ucloud job was charged for $simpleDuration. $response")
+            updateStackLastCharged(stack, chargeTime)
+        } else if (response.insufficientFunds.isNotEmpty()){
+            // Insufficient funds
+            logger.info("Stack ${stack}. ucloud job has insufficient funds. $response")
+        } else if (response.duplicateCharges.isNotEmpty()){
+            // Duplicate charges
+            logger.info("Stack ${stack}. ucloud job duplicate charges. $response")
             updateStackLastCharged(stack, chargeTime)
         }
-
         logger.info("Charge response:", response)
-        return response
     }
 
     fun getLastChargedFromStack(stack: Stack): Instant {
-        // FIXME Store lastcharged in database not openstack tags
+        // TODO Consider storing lastcharged in database not openstack tags
 
         val prefix = "lastcharged:"
-        val lastCharged = stack.tags.first { it.contains(prefix) }.removePrefix(prefix)
+        val lastCharged = stack.tags?.first { it.contains(prefix) }?.removePrefix(prefix)
 
-        return if (lastCharged.isBlank()) {
-            // map to instant?
+        return if (lastCharged.isNullOrBlank()) {
             Instant.parse(stack.creationTime)
         } else {
-            // Vi er ude i noget sovs her. vi skal have rigtige datetimes i en database
+            // Hope this parses
             Instant.parse(lastCharged)
         }
     }
 
-    fun updateStackLastCharged(stack: Stack, chargedAt: Instant) {
+    fun updateStackLastCharged(listStack: Stack, chargedAt: Instant) {
         // FIXME Store in database not openstack tags
+        // Alternatively: Store on metadata on instance
+
+        //Start by getting the stack with all details.
+        //When stack is retreived from list it doesnt have parameters?
+
+        val stack = getStackByName(listStack.name)
+        if (stack == null) {
+            logger.error("Could not update lastcharged. Stack not found: $listStack.name")
+            return
+        }
+
         val client = getClient()
         val templateAsMap = client.heat().templates().getTemplateAsMap(stack.name)
         val jsonStr = jacksonObjectMapper().writeValueAsString(templateAsMap)
@@ -380,16 +435,17 @@ class OpenStackService(
         return client.heat().events().list(stackName, stackIdentity)
     }
 
-    fun deleteStacks(jobs: List<Job>) {
+    fun deleteJobs(jobs: List<Job>) {
         for (job in jobs) {
-            deleteStack(job.id)
+            // FIXME DETTE SKAL OGSÅ VÆRE EN TRÅD PER JOB
+            deleteJob(job)
         }
     }
 
-    fun deleteStack(stackIdentity: String) {
+    fun deleteJob(job: Job) {
         val client = getClient()
 
-        val stackByName = client.heat().stacks().getStackByName(prefixStackName(stackIdentity))
+        val stackByName = client.heat().stacks().getStackByName(job.openstackName)
         if (stackByName != null) {
             logger.info("Deleting stack: ${stackByName.name}")
             val delete = client.heat().stacks().delete(stackByName.name, stackByName.id)
@@ -397,7 +453,7 @@ class OpenStackService(
                 throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Stack could not be deleted")
             }
         } else {
-            logger.info("Stack not found: $stackIdentity")
+            logger.info("Stack not found with name: ${job.openstackName}")
             // Maybe dont throw exception here?
             //throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stack not found")
         }
@@ -410,7 +466,7 @@ class OpenStackService(
             threadPool.execute {
                 val startTime = System.currentTimeMillis()
                 while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
-                    val stack = getStack(job.id)
+                    val stack = getStackByName(job.openstackName)
                     if (stack == null) {
                         logger.info("Could not find stack. Assume deleted", stack)
                         sendJobStatusMessage(job.id, JobState.SUCCESS, "Stack DELETE complete")
@@ -433,7 +489,7 @@ class OpenStackService(
     }
 
     fun verifyJob(job: Job) {
-        val stack = getStack(job.id)
+        val stack = getStackByName(job.openstackName)
 
         if (stack == null) {
             logger.info("Could not find stack. Assume deleted", job, stack)
@@ -458,7 +514,7 @@ class OpenStackService(
                     job.id, JobState.RUNNING,
                     "ERROR, Unknown status: ${job.currentState.name}")
             }
-            job.currentState.name == expectedJobState.name -> {
+            job.currentState != expectedJobState -> {
                 // Status in ucloud is not as expected. Send update.
                 logger.info("Job status not as expected, updating ucloud: ${stack.status}", job, stack)
                 sendJobStatusMessage(job.id, expectedJobState, "Stack status: ${stack.status}")

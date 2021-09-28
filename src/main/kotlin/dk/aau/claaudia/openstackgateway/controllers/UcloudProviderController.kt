@@ -37,12 +37,12 @@ class SimpleCompute(
         openstackService.createStacks(request.items)
 
         log.info("Waiting for stacks to start: $request")
-        openstackService.monitorStackCreations(request.items)
+        openstackService.sendStatusWhenStackComplete(request.items)
     }
 
     override fun delete(request: BulkRequest<Job>) {
         log.info("Deleting jobs: $request")
-        openstackService.deleteStacks(request.items)
+        openstackService.deleteJobs(request.items)
 
         log.info("Waiting for stacks to be deleted: $request")
         openstackService.monitorStackDeletions(request.items)

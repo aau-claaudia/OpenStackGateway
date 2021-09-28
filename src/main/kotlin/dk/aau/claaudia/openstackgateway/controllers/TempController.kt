@@ -4,11 +4,9 @@ import dk.aau.claaudia.openstackgateway.extensions.getLogger
 import dk.aau.claaudia.openstackgateway.models.requests.TempJobRequest
 import dk.aau.claaudia.openstackgateway.services.OpenStackService
 import dk.aau.claaudia.openstackgateway.services.TemplateService
-import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import org.openstack4j.model.heat.Stack
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
-import org.springframework.web.server.ResponseStatusException
 
 /**
  * Temporary endpoints for doing manual creation and deletion of stacks
@@ -50,17 +48,17 @@ class TempController(
         }
     }
 
-    @DeleteMapping(value = ["/{id}"])
-    @ResponseStatus(HttpStatus.OK)
-    fun deleteJobs(@PathVariable id: String) {
-        logger.info("Received job delete request. Id: $id")
-        openstackService.deleteStack(id)
-    }
+//    @DeleteMapping(value = ["/{id}"])
+//    @ResponseStatus(HttpStatus.OK)
+//    fun deleteJobs(@PathVariable id: String) {
+//        logger.info("Received job delete request. Id: $id")
+//        openstackService.deleteJob(id)
+//    }
 
     @GetMapping(value = ["/{id}"])
     fun getStack(@PathVariable id: String): Stack? {
         logger.info("Received get stack request. Id: $id")
-        return openstackService.getStack(id)
+        return openstackService.getStackByName(id)
     }
 
     companion object {

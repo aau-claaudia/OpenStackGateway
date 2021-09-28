@@ -11,8 +11,7 @@ class Jobs(private val openStackService: OpenStackService) {
     @Scheduled(cron = "0 0,15,30,45 * * * *")
     fun cronScheduledTask() {
         logger.info("Charge task is running")
-        //Vi skal lige have testet det her før vi slipper den løs
-        //openStackService.chargeAllJobs()
+        openStackService.chargeAllJobs()
     }
 
 //    @Scheduled(initialDelay = 2000, fixedDelay = 3000)
