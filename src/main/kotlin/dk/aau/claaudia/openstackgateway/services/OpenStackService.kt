@@ -24,8 +24,8 @@ import org.openstack4j.model.heat.Event
 import org.openstack4j.model.heat.Stack
 import org.openstack4j.model.heat.Template
 import org.openstack4j.model.identity.v3.Token
-import org.openstack4j.model.identity.v3.User
 import org.openstack4j.model.image.v2.Image
+import org.openstack4j.model.network.SecurityGroup
 import org.openstack4j.model.storage.block.Volume
 import org.openstack4j.model.storage.block.VolumeAttachment
 import org.openstack4j.openstack.OSFactory
@@ -56,10 +56,10 @@ class OpenStackService(
     private fun getClient(): OSClientV3 {
         //OSFactory.enableHttpLoggingFilter(true)
         if (token?.hasExpired() == false) {
-            logger.info("Using existing token")
+            logger.info("Using existing openstack token")
             return OSFactory.clientFromToken(token)
         } else {
-            logger.info("Getting new token")
+            logger.info("Getting new openstack token")
             //Create and saving client for future use
             val client = OSFactory.builderV3()
                 .endpoint(config.endpoints.auth)
@@ -70,41 +70,10 @@ class OpenStackService(
                 )
                 .scopeToProject(projectIdentifier)
                 .authenticate()
-            logger.info("Saving token")
+            logger.info("Saving openstack token")
             token = client.token
             return client
         }
-    }
-
-    private fun prefixStackName(ucloudJobId: String): String {
-        return "${config.stackPrefix}${ucloudJobId}"
-    }
-
-    fun test(): String {
-        val os = getClient()
-
-        try {
-            val users: List<User?> = os.identity().users().list()
-            logger.info(users.toString())
-
-        } catch (e: Exception) {
-            logger.error("Error getting users, ", e)
-        }
-        val flavors: List<Flavor?> = os.compute().flavors().list()
-        logger.info(flavors.toString())
-
-        val servers: List<Server?> = os.compute().servers().list()
-        logger.info(servers.toString())
-
-        os.heat().templates()
-
-        return os.token.toString()
-    }
-
-    fun listFlavors(): List<Flavor?> {
-        val list = getClient().compute().flavors().list()
-        logger.info("found flavors:", list)
-        return list
     }
 
     fun listServers(): List<Server?> {
@@ -118,9 +87,21 @@ class OpenStackService(
     }
 
     fun getImage(id: String?): Image? {
-        val img = getClient().imagesV2().get(id)
-        logger.info("image: $img")
-        return img
+        val image = getClient().imagesV2().get(id)
+        logger.info("image: $image")
+        return image
+    }
+
+    fun getSecurityGroup(id: String?): SecurityGroup? {
+        val group = getClient().networking().securitygroup().get(id)
+        logger.info("Security group: $group")
+        return group
+    }
+
+    fun listFlavors(): List<Flavor?> {
+        val list = getClient().compute().flavors().list()
+        logger.info("list flavors:", list)
+        return list
     }
 
     fun getFlavorById(id: String?): Flavor? {
@@ -130,17 +111,9 @@ class OpenStackService(
     }
 
     fun getFlavorByName(name: String?): Flavor? {
-        val flavor = getClient().compute().flavors().list().first{ it.name == name}
+        val flavor = getClient().compute().flavors().list().first { it.name == name }
         logger.info("flavor by name: $flavor")
         return flavor
-    }
-
-    fun listStacks(): List<Stack> {
-        return getClient().heat().stacks().list()
-    }
-
-    fun getStackOld(name: String): Stack? {
-        return getClient().heat().stacks().getStackByName(prefixStackName(name))
     }
 
     fun getStackByName(name: String): Stack? {
@@ -148,7 +121,7 @@ class OpenStackService(
     }
 
     fun mapImage(name: String, version: String): String {
-        val image = provider.images.firstOrNull{ it.ucloudName == name && it.ucloudVersion == version }
+        val image = provider.images.firstOrNull { it.ucloudName == name && it.ucloudVersion == version }
 
         return when {
             image?.openstackId?.isNotBlank() == true -> {
@@ -195,7 +168,7 @@ class OpenStackService(
         return parameters
     }
 
-    fun createStacks(jobs: List<Job>){
+    fun createStacks(jobs: List<Job>) {
         logger.info("creating stacks: $jobs.size")
 
         // There is only one template for now
@@ -219,26 +192,42 @@ class OpenStackService(
                     logger.error("Received parameters: $parameters")
                     logger.error("Excepted parameters: ${template.templateJson}")
                     logger.error("Missing parameters: $missingParameters")
-                    throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing parameters: $missingParameters")
+
+                    sendJobFailedMessage(job.id, "Missing parameters: $missingParameters")
+                    return@execute
                 }
 
                 // Verify flavor exists
-                getFlavorByName(parameters["flavor"])
-                    ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Flavor not found: ${parameters["flavor"]}")
+                getFlavorByName(parameters["flavor"]) ?: run {
+                    val errorMessage = "Flavor not found: ${parameters["flavor"]}"
+                    logger.error(errorMessage)
+                    sendJobFailedMessage(job.id, errorMessage)
+                    return@execute
+                }
 
                 // Verify image exists
-                getImage(parameters["image"])
-                    ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Image not found: ${parameters["image"]}")
+                getImage(parameters["image"]) ?: run {
+                    val errorMessage = "Image not found: ${parameters["image"]}"
+                    logger.error(errorMessage)
+                    sendJobFailedMessage(job.id, errorMessage)
+                    return@execute
+                }
 
-                // TODO Verify security group exists
+                // Verify security group exists
+                getSecurityGroup(parameters["security_group"]) ?: run {
+                    val errorMessage = "Security group not found: ${parameters["security_group"]}"
+                    logger.error(errorMessage)
+                    sendJobFailedMessage(job.id, errorMessage)
+                    return@execute
+                }
 
                 // Send stack creation to openstack
-                createStack(job.id, template.templateJson, parameters)
+                createStack(job.openstackName, template.templateJson, parameters)
             } catch (e: Exception) {
-                // Send message to ucloud
-                sendJobStatusMessage(job.id, JobState.FAILURE,
-                    MessageFormat.format(messages.jobs.createFailed)
-                )
+                // Not really nice to catch all exceptions here is it...
+
+                sendJobFailedMessage(job.id, e.message as String)
+
                 // Raise exception for logging
                 throw e
             }
@@ -255,7 +244,7 @@ class OpenStackService(
         val build = Builders.stack()
             .template(template)
             .parameters(parameters)
-            .name(prefixStackName(name))
+            .name(name)
             .timeoutMins(60)
             .build()
 
@@ -281,12 +270,10 @@ class OpenStackService(
                         logger.info("Stack CREATE complete")
                         val outputIP = stack.outputs.find { it["output_key"] == "server_ip" }
                         if (!outputIP.isNullOrEmpty()) {
-                            sendJobStatusMessage(job.id, JobState.RUNNING,
-                                MessageFormat.format(messages.jobs.createComplete, outputIP["output_value"]))
+                            sendJobRunningMessage(job.id, outputIP["output_value"] as String)
                         } else {
                             logger.error("Did not receive IP output from openstack", job, stack)
-                            sendJobStatusMessage(job.id, JobState.FAILURE,
-                                MessageFormat.format(messages.jobs.createFailed))
+                            sendJobFailedMessage(job.id, "Did not receive IP output from openstack")
                         }
 
                         return@execute
@@ -295,8 +282,27 @@ class OpenStackService(
                     logger.info("Waiting to retry")
                     Thread.sleep(config.monitor.delay)
                 }
+                // Job could not be started
+                sendJobFailedMessage(job.id, "Could not start job. Timeout exceeded")
+                return@execute
             }
         }
+    }
+
+    fun sendJobFailedMessage(jobId: String, message: String) {
+        sendJobStatusMessage(
+            jobId,
+            JobState.FAILURE,
+            MessageFormat.format(messages.jobs.createFailed, message)
+        )
+    }
+
+    fun sendJobRunningMessage(jobId: String, message: String) {
+        sendJobStatusMessage(
+            jobId,
+            JobState.RUNNING,
+            MessageFormat.format(messages.jobs.createComplete, message)
+        )
     }
 
     fun sendJobStatusMessage(jobId: String, state: JobState, message: String) {
@@ -314,69 +320,65 @@ class OpenStackService(
         ).orThrow()
     }
 
-    //TEST REMOVE ME:
-    fun getAllStacks(){
-        val client = getClient()
-        val list = client.heat().stacks().list().filter { it.status in listOf("CREATE_COMPLETE", "UPDATE_COMPLETE") }
-        list.forEach{
-            logger.info(it.tags.joinToString())
-        }
-    }
-
     fun chargeAllJobs() {
         val client = getClient()
 
         val list = client.heat().stacks().list().filter { it.status in listOf("CREATE_COMPLETE", "UPDATE_COMPLETE") }
         logger.info("list: ${list.size}")
 
-        list.forEach{
+        list.forEach {
             asyncChargeJob(it)
         }
     }
 
     fun asyncChargeJob(stack: Stack) {
-        // TODO Make this asynchronous
-        val job = JobsControl.retrieve.call(JobsControlRetrieveRequest(stack.ucloudId), uCloudClient)
-        logger.info("Found job $job")
+        threadPool.execute {
+            val job = JobsControl.retrieve.call(JobsControlRetrieveRequest(stack.ucloudId), uCloudClient)
+            logger.info("Found job $job")
 
-        if (job.statusCode == HttpStatusCode.NotFound) {
-            logger.info("Job not found in ucloud. UcloudId: ${stack.ucloudId}")
-            return
-        }
+            if (job.statusCode == HttpStatusCode.NotFound) {
+                logger.info("Job not found in ucloud. UcloudId: ${stack.ucloudId}")
+                return@execute
+            }
 
-        //Send a charge request to ucloud. Duration is time since last charge
+            //Send a charge request to ucloud. Duration is time since last charge
 
-        val chargeTime: Instant = Instant.now()
-        val lastChargedTime: Instant  = getLastChargedFromStack(stack)
+            val chargeTime: Instant = Instant.now()
+            val lastChargedTime: Instant = getLastChargedFromStack(stack)
 
-        val duration = Duration.between(lastChargedTime, chargeTime)
-        val simpleDuration = SimpleDuration(duration.toHours().toInt(),duration.toMinutesPart(),duration.toSecondsPart())
+            val duration = Duration.between(lastChargedTime, chargeTime)
+            val simpleDuration =
+                SimpleDuration(duration.toHours().toInt(), duration.toMinutesPart(), duration.toSecondsPart())
 
-        val response = JobsControl.chargeCredits.call(
-            JobsControlChargeCreditsRequest(
-                listOf(
-                    JobsControlChargeCreditsRequestItem(
-                        // Er chargedate okay som chargeId
-                        stack.ucloudId, lastChargedTime.toString(), simpleDuration
+            val response = JobsControl.chargeCredits.call(
+                JobsControlChargeCreditsRequest(
+                    listOf(
+                        JobsControlChargeCreditsRequestItem(
+                            // Er chargedate okay som chargeId
+                            stack.ucloudId, lastChargedTime.toString(), simpleDuration
+                        )
                     )
-                )
-            ),
-            uCloudClient
-        ).orThrow()
+                ),
+                uCloudClient
+            ).orThrow()
 
-        if (response.duplicateCharges.isEmpty() && response.duplicateCharges.isEmpty()) {
-            // Everything is good
-            logger.info("Stack ${stack}. ucloud job was charged for $simpleDuration. $response")
-            updateStackLastCharged(stack, chargeTime)
-        } else if (response.insufficientFunds.isNotEmpty()){
-            // Insufficient funds
-            logger.info("Stack ${stack}. ucloud job has insufficient funds. $response")
-        } else if (response.duplicateCharges.isNotEmpty()){
-            // Duplicate charges
-            logger.info("Stack ${stack}. ucloud job duplicate charges. $response")
-            updateStackLastCharged(stack, chargeTime)
+            if (response.duplicateCharges.isEmpty() && response.duplicateCharges.isEmpty()) {
+                // Everything is good
+                logger.info("Stack ${stack}. ucloud job was charged for $simpleDuration. $response")
+                updateStackLastCharged(stack, chargeTime)
+            } else if (response.insufficientFunds.isNotEmpty()) {
+                // Insufficient funds
+                logger.info("Stack ${stack}. ucloud job has insufficient funds. $response")
+                // TODO Shelve job here?
+            } else if (response.duplicateCharges.isNotEmpty()) {
+                // Duplicate charges
+                logger.info("Stack ${stack}. ucloud job duplicate charges. $response")
+                updateStackLastCharged(stack, chargeTime)
+            }
+            logger.info("Charge response:", response)
+
+            return@execute
         }
-        logger.info("Charge response:", response)
     }
 
     fun getLastChargedFromStack(stack: Stack): Instant {
@@ -398,7 +400,7 @@ class OpenStackService(
         // Alternatively: Store on metadata on instance
 
         //Start by getting the stack with all details.
-        //When stack is retreived from list it doesnt have parameters?
+        //When stack is retrieved from list it doesn't have parameters
 
         val stack = getStackByName(listStack.name)
         if (stack == null) {
@@ -437,25 +439,27 @@ class OpenStackService(
 
     fun deleteJobs(jobs: List<Job>) {
         for (job in jobs) {
-            // FIXME DETTE SKAL OGSÅ VÆRE EN TRÅD PER JOB
-            deleteJob(job)
+            asyncDeleteJob(job)
         }
     }
 
-    fun deleteJob(job: Job) {
-        val client = getClient()
+    fun asyncDeleteJob(job: Job) {
+        threadPool.execute {
+            val client = getClient()
 
-        val stackByName = client.heat().stacks().getStackByName(job.openstackName)
-        if (stackByName != null) {
-            logger.info("Deleting stack: ${stackByName.name}")
-            val delete = client.heat().stacks().delete(stackByName.name, stackByName.id)
-            if (!delete.isSuccess) {
-                throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Stack could not be deleted")
+            val stackByName = client.heat().stacks().getStackByName(job.openstackName)
+            if (stackByName != null) {
+                logger.info("Deleting stack: ${stackByName.name}")
+                val delete = client.heat().stacks().delete(stackByName.name, stackByName.id)
+                if (!delete.isSuccess) {
+                    logger.error("Stack deletion request was unsuccessful ${stackByName.name}")
+                } else {
+                    logger.error("Stack deletion request was successful ${stackByName.name}")
+                }
+            } else {
+                logger.info("Stack not found with name: ${job.openstackName}")
             }
-        } else {
-            logger.info("Stack not found with name: ${job.openstackName}")
-            // Maybe dont throw exception here?
-            //throw ResponseStatusException(HttpStatus.NOT_FOUND, "Stack not found")
+            return@execute
         }
     }
 
@@ -478,6 +482,9 @@ class OpenStackService(
                     logger.info("Waiting to retry")
                     Thread.sleep(config.monitor.delay)
                 }
+                // Job could not be deleted
+                sendJobFailedMessage(job.id, "Could not delete job. Timeout exceeded")
+                return@execute
             }
         }
     }
@@ -512,7 +519,8 @@ class OpenStackService(
                 logger.info("Unhandled status: ${stack.status}", job, stack)
                 sendJobStatusMessage(
                     job.id, JobState.RUNNING,
-                    "ERROR, Unknown status: ${job.currentState.name}")
+                    "ERROR, Unknown status: ${job.currentState.name}"
+                )
             }
             job.currentState != expectedJobState -> {
                 // Status in ucloud is not as expected. Send update.
