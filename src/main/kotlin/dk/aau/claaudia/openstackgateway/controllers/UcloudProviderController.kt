@@ -41,8 +41,8 @@ class SimpleCompute(
     }
 
     override fun delete(request: BulkRequest<Job>) {
-        log.info("Deleting jobs: $request")
-        openstackService.deleteJobs(request.items)
+        log.info("Charging and deleting jobs: $request")
+        openstackService.chargeDeleteJobs(request.items)
 
         log.info("Waiting for stacks to be deleted: $request")
         openstackService.monitorStackDeletions(request.items)
@@ -50,6 +50,7 @@ class SimpleCompute(
 
     override fun extend(request: BulkRequest<JobsProviderExtendRequestItem>) {
         log.info("Extending some jobs: $request")
+        // TODO What does extend mean for a VM?
         JobsControl.update.call(
             bulkRequestOf(request.items.map { requestItem ->
                 JobsControlUpdateRequestItem(

@@ -45,9 +45,9 @@ class HomeController(
         return "charge all jobs!"
     }
 
-    @GetMapping("/nogettest")
-    fun indexTest(): String {
-        openstackService.getAllStacks()
-        return "Dette er bare test"
-    }
+//    @GetMapping("/nogettest")
+//    fun indexTest(): String {
+//        openstackService.getAllStacks()
+//        return "Dette er bare test"
+//    }
 }
