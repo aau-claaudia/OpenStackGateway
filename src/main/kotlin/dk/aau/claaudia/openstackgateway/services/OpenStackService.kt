@@ -236,7 +236,7 @@ class OpenStackService(
         }
     }
 
-    fun createStack(name: String, template: String, parameters: MutableMap<String, String>): Stack? {
+    fun createStack(name: String, template: String, parameters: MutableMap<String, String>) {
         logger.info("Create stack: $name", template, parameters)
 
         val client = getClient()
@@ -251,10 +251,7 @@ class OpenStackService(
         // TODO Consider passing parameters as a file
         //Builders.stack().files(mutableMapOf("file1" to "file contents"))
 
-        val created = client.heat().stacks().create(build)
-        //The stack returned by create only has id and href
-        //But I guess this only returns a 200
-        return getStackByName(created.name)
+        client.heat().stacks().create(build)
     }
 
     fun sendStatusWhenStackComplete(jobs: List<Job>) {
@@ -333,52 +330,55 @@ class OpenStackService(
 
     fun asyncChargeJob(stack: Stack) {
         threadPool.execute {
-            val job = JobsControl.retrieve.call(JobsControlRetrieveRequest(stack.ucloudId), uCloudClient)
-            logger.info("Found job $job")
-
-            if (job.statusCode == HttpStatusCode.NotFound) {
-                logger.info("Job not found in ucloud. UcloudId: ${stack.ucloudId}")
-                return@execute
-            }
-
-            //Send a charge request to ucloud. Duration is time since last charge
-
-            val chargeTime: Instant = Instant.now()
-            val lastChargedTime: Instant = getLastChargedFromStack(stack)
-
-            val duration = Duration.between(lastChargedTime, chargeTime)
-            val simpleDuration =
-                SimpleDuration(duration.toHours().toInt(), duration.toMinutesPart(), duration.toSecondsPart())
-
-            val response = JobsControl.chargeCredits.call(
-                JobsControlChargeCreditsRequest(
-                    listOf(
-                        JobsControlChargeCreditsRequestItem(
-                            // Er chargedate okay som chargeId
-                            stack.ucloudId, lastChargedTime.toString(), simpleDuration
-                        )
-                    )
-                ),
-                uCloudClient
-            ).orThrow()
-
-            if (response.duplicateCharges.isEmpty() && response.duplicateCharges.isEmpty()) {
-                // Everything is good
-                logger.info("Stack ${stack}. ucloud job was charged for $simpleDuration. $response")
-                updateStackLastCharged(stack, chargeTime)
-            } else if (response.insufficientFunds.isNotEmpty()) {
-                // Insufficient funds
-                logger.info("Stack ${stack}. ucloud job has insufficient funds. $response")
-                // TODO Shelve job here?
-            } else if (response.duplicateCharges.isNotEmpty()) {
-                // Duplicate charges
-                logger.info("Stack ${stack}. ucloud job duplicate charges. $response")
-                updateStackLastCharged(stack, chargeTime)
-            }
-            logger.info("Charge response:", response)
-
+            chargeJob(stack)
             return@execute
         }
+    }
+
+    fun chargeJob(stack: Stack) {
+        val job = JobsControl.retrieve.call(JobsControlRetrieveRequest(stack.ucloudId), uCloudClient)
+        logger.info("Found job $job")
+
+        if (job.statusCode == HttpStatusCode.NotFound) {
+            logger.info("Job not found in ucloud. UcloudId: ${stack.ucloudId}")
+            return
+        }
+
+        //Send a charge request to ucloud. Duration is time since last charge
+
+        val chargeTime: Instant = Instant.now()
+        val lastChargedTime: Instant = getLastChargedFromStack(stack)
+
+        val duration = Duration.between(lastChargedTime, chargeTime)
+        val simpleDuration =
+            SimpleDuration(duration.toHours().toInt(), duration.toMinutesPart(), duration.toSecondsPart())
+
+        val response = JobsControl.chargeCredits.call(
+            JobsControlChargeCreditsRequest(
+                listOf(
+                    JobsControlChargeCreditsRequestItem(
+                        // Er chargedate okay som chargeId
+                        stack.ucloudId, lastChargedTime.toString(), simpleDuration
+                    )
+                )
+            ),
+            uCloudClient
+        ).orThrow()
+
+        if (response.duplicateCharges.isEmpty() && response.duplicateCharges.isEmpty()) {
+            // Everything is good
+            logger.info("Stack ${stack}. ucloud job was charged for $simpleDuration. $response")
+            updateStackLastCharged(stack, chargeTime)
+        } else if (response.insufficientFunds.isNotEmpty()) {
+            // Insufficient funds
+            logger.info("Stack ${stack}. ucloud job has insufficient funds. $response")
+            // TODO Shelve job here?
+        } else if (response.duplicateCharges.isNotEmpty()) {
+            // Duplicate charges
+            logger.info("Stack ${stack}. ucloud job duplicate charges. $response")
+            updateStackLastCharged(stack, chargeTime)
+        }
+        logger.info("Charge response:", response)
     }
 
     fun getLastChargedFromStack(stack: Stack): Instant {
@@ -437,29 +437,48 @@ class OpenStackService(
         return client.heat().events().list(stackName, stackIdentity)
     }
 
-    fun deleteJobs(jobs: List<Job>) {
+//    fun deleteJobs(jobs: List<Job>) {
+//        for (job in jobs) {
+//            asyncDeleteJob(job)
+//        }
+//    }
+//    fun asyncDeleteJob(job: Job) {
+//        threadPool.execute {
+//            deleteJob(job)
+//            return@execute
+//        }
+//    }
+
+    fun chargeDeleteJobs(jobs: List<Job>) {
         for (job in jobs) {
-            asyncDeleteJob(job)
+            asyncChargeDeleteJob(job)
         }
     }
 
-    fun asyncDeleteJob(job: Job) {
+    fun asyncChargeDeleteJob(job: Job) {
         threadPool.execute {
             val client = getClient()
-
-            val stackByName = client.heat().stacks().getStackByName(job.openstackName)
-            if (stackByName != null) {
-                logger.info("Deleting stack: ${stackByName.name}")
-                val delete = client.heat().stacks().delete(stackByName.name, stackByName.id)
-                if (!delete.isSuccess) {
-                    logger.error("Stack deletion request was unsuccessful ${stackByName.name}")
-                } else {
-                    logger.error("Stack deletion request was successful ${stackByName.name}")
-                }
-            } else {
-                logger.info("Stack not found with name: ${job.openstackName}")
-            }
+            val stack = client.heat().stacks().getStackByName(job.openstackName)
+            chargeJob(stack)
+            deleteJob(job)
             return@execute
+        }
+    }
+
+    fun deleteJob(job: Job) {
+        val client = getClient()
+
+        val stackByName = client.heat().stacks().getStackByName(job.openstackName)
+        if (stackByName != null) {
+            logger.info("Deleting stack: ${stackByName.name}")
+            val delete = client.heat().stacks().delete(stackByName.name, stackByName.id)
+            if (!delete.isSuccess) {
+                logger.error("Stack deletion request was unsuccessful ${stackByName.name}")
+            } else {
+                logger.error("Stack deletion request was successful ${stackByName.name}")
+            }
+        } else {
+            logger.info("Stack not found with name: ${job.openstackName}")
         }
     }
 
