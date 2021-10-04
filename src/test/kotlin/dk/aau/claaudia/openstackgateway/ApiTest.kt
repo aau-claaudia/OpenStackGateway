@@ -51,12 +51,12 @@ class HttpControllersTests(@Autowired val mockMvc: MockMvc) {
     @Test
     fun `Test test`() {
 
-        every { openStackService.getAllStacks()} returns Unit
+        every { openStackService.chargeAllJobs() } returns Unit
 
         mockMvc.perform(
-            get("/nogettest"))
+            get("/charge"))
             .andExpect(status().isOk)
-            .andExpect(content().string("Dette er bare test"))
+            .andExpect(content().string("charge all jobs!"))
     }
 
 //    FIXME This should be tested
