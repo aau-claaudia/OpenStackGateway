@@ -36,6 +36,7 @@ class UCloudSpringConfigTest(
     @Primary
     override fun addInterceptors(registry: InterceptorRegistry) {
         // This is disabled for test. Find a way to test authentication without getting a token from ucloud
+        // Consider removing this line from provider package
         registry.addInterceptor(interceptor).addPathPatterns("/ucloud/**")
 
         //Use this for debugging only. It destroys the request body
