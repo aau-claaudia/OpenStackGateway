@@ -14,6 +14,7 @@ plugins {
     kotlin("kapt") version "1.5.31"
     id("org.liquibase.gradle") version "2.0.4"
     id("org.openapi.generator") version "5.0.0"
+    id("org.jetbrains.dokka") version "1.5.30"
 }
 
 allOpen {
