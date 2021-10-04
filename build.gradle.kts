@@ -1,17 +1,17 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 val openstack4jVersion = "3.10"
-val jacksonVersion = "2.12.0"
-val kotlinVersion = "1.4.20"
+val jacksonVersion = "2.13.0"
+val kotlinVersion = "1.5.31"
 
 plugins {
-    id("org.springframework.boot") version "2.4.0"
+    id("org.springframework.boot") version "2.5.5"
     id("io.spring.dependency-management") version "1.0.10.RELEASE"
-    kotlin("jvm") version "1.4.20"
-    kotlin("plugin.spring") version "1.4.20"
-    kotlin("plugin.jpa") version "1.4.20"
-    kotlin("plugin.allopen") version "1.4.20"
-    kotlin("kapt") version "1.4.20"
+    kotlin("jvm") version "1.5.31"
+    kotlin("plugin.spring") version "1.5.31"
+    kotlin("plugin.jpa") version "1.5.31"
+    kotlin("plugin.allopen") version "1.5.31"
+    kotlin("kapt") version "1.5.31"
     id("org.liquibase.gradle") version "2.0.4"
     id("org.openapi.generator") version "5.0.0"
 }
