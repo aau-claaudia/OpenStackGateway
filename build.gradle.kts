@@ -6,7 +6,7 @@ val kotlinVersion = "1.5.31"
 
 plugins {
     id("org.springframework.boot") version "2.5.5"
-    id("io.spring.dependency-management") version "1.0.10.RELEASE"
+    id("io.spring.dependency-management") version "1.0.11.RELEASE"
     kotlin("jvm") version "1.5.31"
     kotlin("plugin.spring") version "1.5.31"
     kotlin("plugin.jpa") version "1.5.31"
@@ -64,19 +64,19 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-webflux:2.4.2")
-    implementation("org.springframework.cloud:spring-cloud-starter-config:3.0.1")
-    implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.0.1")
-    implementation("com.auth0:java-jwt:3.12.1")
+    implementation("org.springframework.boot:spring-boot-starter-webflux:2.5.5")
+    implementation("org.springframework.cloud:spring-cloud-starter-config:3.0.5")
+    implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.0.4")
+    implementation("com.auth0:java-jwt:3.18.2")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
-    implementation("org.springdoc:springdoc-openapi-ui:1.5.2")
+    implementation("org.springdoc:springdoc-openapi-ui:1.5.10")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.github.openstack4j.core:openstack4j-core:$openstack4jVersion")
     implementation("com.github.openstack4j.core.connectors:openstack4j-httpclient:$openstack4jVersion")
 
     implementation("dk.sdu.cloud:jvm-provider-support-jvm:2021.2.0-storage0")
-    implementation("com.squareup.okhttp3:okhttp:4.6.0")
+    implementation("com.squareup.okhttp3:okhttp:4.9.1")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
 
     implementation("org.liquibase:liquibase-core:4.2.2")
@@ -91,7 +91,7 @@ dependencies {
     }
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-    testImplementation("com.ninja-squad:springmockk:1.1.3")
+    testImplementation("com.ninja-squad:springmockk:3.0.1")
 
     kapt("org.springframework.boot:spring-boot-configuration-processor")
 }

@@ -37,7 +37,7 @@ class OpenStackServiceTest(@Autowired val openStackService: OpenStackService) {
     }
 
     @Test
-    fun `given name and version find black`() {
+    fun `given name and version find blank`() {
         val image = openStackService.mapImage("aau-ubuntu-vm", "14.04")
 
         assertThat(image).isEqualTo("")
