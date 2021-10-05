@@ -7,7 +7,7 @@ This service facilitates communication between Ucloud and Claaudia OpenStack.
 It is a stateless service with an API built after UCloud provider specification.
 
 ## Documentation
-More detailed developer documentation can be found [here](documentation)
+More detailed developer documentation can be found [here](documentation/index.md)
 
 This documentation is generated with [Dokka](https://github.com/Kotlin/dokka) in github flavored markdown:
 
