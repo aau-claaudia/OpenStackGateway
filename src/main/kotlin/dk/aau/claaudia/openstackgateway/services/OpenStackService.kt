@@ -317,25 +317,43 @@ class OpenStackService(
         ).orThrow()
     }
 
-    fun chargeAllJobs() {
+    /**
+     * For each stack in openstack, charge the corresponding job in ucloud.
+     */
+    fun chargeAllStack() {
         val client = getClient()
 
-        val list = client.heat().stacks().list().filter { it.status in listOf("CREATE_COMPLETE", "UPDATE_COMPLETE") }
-        logger.info("list: ${list.size}")
+        val activeStacks = client.heat().stacks().list().filter { it.status in listOf("CREATE_COMPLETE", "UPDATE_COMPLETE") }
+        logger.info("list: ${activeStacks.size}")
 
-        list.forEach {
+        activeStacks.forEach {
             asyncChargeJob(it)
         }
     }
 
+    /**
+     * Charge a stack asynchronous to avoid exceptions stopping other stacks from being charged
+     */
     fun asyncChargeJob(stack: Stack) {
         threadPool.execute {
-            chargeJob(stack)
+            chargeStack(stack)
             return@execute
         }
     }
 
-    fun chargeJob(stack: Stack) {
+    /**
+     * Get the corresponding job from ucloud to make sure it exists, @return if not
+     *
+     * Calculate the time amount to charge.
+     * This amount is the time between the lastCharged timestamp and now.
+     *
+     * Maintain lastCharged for each stack as a tag on the stack in openstack.
+     * lastCharged is the moment the stack was charged last.
+     * The first time a stack is charged, use its creation time as lastCharged
+     *
+     * @property stack the stack to charge
+     */
+    fun chargeStack(stack: Stack) {
         val job = JobsControl.retrieve.call(JobsControlRetrieveRequest(stack.ucloudId), uCloudClient)
         logger.info("Found job $job")
 
@@ -343,8 +361,6 @@ class OpenStackService(
             logger.info("Job not found in ucloud. UcloudId: ${stack.ucloudId}")
             return
         }
-
-        //Send a charge request to ucloud. Duration is time since last charge
 
         val chargeTime: Instant = Instant.now()
         val lastChargedTime: Instant = getLastChargedFromStack(stack)
@@ -437,18 +453,6 @@ class OpenStackService(
         return client.heat().events().list(stackName, stackIdentity)
     }
 
-//    fun deleteJobs(jobs: List<Job>) {
-//        for (job in jobs) {
-//            asyncDeleteJob(job)
-//        }
-//    }
-//    fun asyncDeleteJob(job: Job) {
-//        threadPool.execute {
-//            deleteJob(job)
-//            return@execute
-//        }
-//    }
-
     fun chargeDeleteJobs(jobs: List<Job>) {
         for (job in jobs) {
             asyncChargeDeleteJob(job)
@@ -459,7 +463,7 @@ class OpenStackService(
         threadPool.execute {
             val client = getClient()
             val stack = client.heat().stacks().getStackByName(job.openstackName)
-            chargeJob(stack)
+            chargeStack(stack)
             deleteJob(job)
             return@execute
         }

@@ -6,6 +6,12 @@ Compute provider API for UCloud
 This service facilitates communication between Ucloud and Claaudia OpenStack.
 It is a stateless service with an API built after UCloud provider specification.
 
+## Documentation
+More detailed developer documentation can be found [here](documentation)
+
+This documentation is generated with [Dokka](https://github.com/Kotlin/dokka) in github flavored markdown:
+
+`./gradlew dokkaGfm`
 
 ## Technology
 The service is built with Kotlin and Spring Boot. 
@@ -46,3 +52,22 @@ It uses the spec definition from the specs folder.
 # Deployments
 
 To be written
+
+# Openstack compute flavors
+The general compute flavors are based on deic's type1 descriptions available [somewhere](somewhere).
+
+GPU instances are based on our current hardware,
+machines with six t4 GPUs, 256GB memory,
+and 64 vCPUs (2x16 core EPYCs).
+
+Storage is based on whatever we did on our old OpenStack platform.
+
+Pricing is just an example
+
+Name | vCPU | RAM | Volatile Storage | GPU | Price
+--- | --- | --- | --- | --- | --- 
+uc-general-small | 4 vCPU | 16 Gb | 1 Tb | N/A | 0.34 DKK/hour
+uc-general-medium | 8 vCPU | 32 Gb | 1 Tb | N/A | 0.68 DKK/hour
+uc-general-large | 16 vCPU | 64 Gb | 1 Tb | N/A | 1.37 DKK/hour
+uc-general-xlarge | 64 vCPU | 256 Gb | 1 Tb | N/A | 5.50 DKK/hour
+uc-t4-1 | 10 vCPU | 40 Gb | 1 Tb | T4 16 Gb | 8.50 DKK/hour

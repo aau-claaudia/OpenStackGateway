@@ -1,15 +1,11 @@
 package dk.aau.claaudia.openstackgateway.controllers
 
-import dk.aau.claaudia.openstackgateway.models.StackStatus
 import dk.aau.claaudia.openstackgateway.services.OpenStackService
 import dk.sdu.cloud.providers.UCloudClient
 import io.swagger.v3.oas.annotations.Hidden
-import org.springframework.context.annotation.Primary
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.servlet.view.RedirectView;
-import java.time.Instant
-import javax.swing.text.View
 
 /**
  * This controller redirects from the base url to the swagger ui
@@ -41,7 +37,7 @@ class HomeController(
 
     @GetMapping("/charge")
     fun chargedTest(): String {
-        openstackService.chargeAllJobs()
+        openstackService.chargeAllStack()
         return "charge all jobs!"
     }
 
