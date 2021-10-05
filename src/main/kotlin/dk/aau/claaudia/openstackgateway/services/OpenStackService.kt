@@ -320,7 +320,7 @@ class OpenStackService(
     /**
      * For each stack in openstack, charge the corresponding job in ucloud.
      */
-    fun chargeAllStack() {
+    fun chargeAllStacks() {
         val client = getClient()
 
         val activeStacks = client.heat().stacks().list().filter { it.status in listOf("CREATE_COMPLETE", "UPDATE_COMPLETE") }
@@ -342,7 +342,9 @@ class OpenStackService(
     }
 
     /**
-     * Get the corresponding job from ucloud to make sure it exists, @return if not
+     * Charge stack by calling JobControl.chargeCredits
+     *
+     * Get the corresponding job from ucloud to make sure it exists, return if not
      *
      * Calculate the time amount to charge.
      * This amount is the time between the lastCharged timestamp and now.

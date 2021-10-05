@@ -37,7 +37,7 @@ class HomeController(
 
     @GetMapping("/charge")
     fun chargedTest(): String {
-        openstackService.chargeAllStack()
+        openstackService.chargeAllStacks()
         return "charge all jobs!"
     }
 

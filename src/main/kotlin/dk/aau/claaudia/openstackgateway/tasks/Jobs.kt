@@ -19,7 +19,7 @@ class Jobs(private val openStackService: OpenStackService) {
     @Scheduled(cron = "0 0,15,30,45 * * * *")
     fun cronScheduledTask() {
         logger.info("Charge task is running")
-        openStackService.chargeAllStack()
+        openStackService.chargeAllStacks()
     }
 
     companion object {
