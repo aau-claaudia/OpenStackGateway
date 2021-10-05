@@ -51,7 +51,7 @@ class HttpControllersTests(@Autowired val mockMvc: MockMvc) {
     @Test
     fun `Test test`() {
 
-        every { openStackService.chargeAllJobs() } returns Unit
+        every { openStackService.chargeAllStack() } returns Unit
 
         mockMvc.perform(
             get("/charge"))

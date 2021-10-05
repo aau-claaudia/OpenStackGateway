@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.dokka.gradle.DokkaTask
 
 val openstack4jVersion = "3.10"
 val jacksonVersion = "2.13.0"
@@ -120,4 +121,10 @@ openApiGenerate {
     generateModelDocumentation.set(false)
     //Only generate models for now
     globalProperties.put("models", "")
+}
+
+tasks.dokkaGfm.configure {
+    outputDirectory.set(buildDir.parentFile.resolve("documentation"))
+
+    moduleName.set("OpenStackGateway")
 }
