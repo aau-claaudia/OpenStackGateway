@@ -52,3 +52,4 @@ extra:
   generator: false
 
 copyright: Copyright &copy; 2021 - 2022 Claaudia
+theme: jekyll-theme-cayman
