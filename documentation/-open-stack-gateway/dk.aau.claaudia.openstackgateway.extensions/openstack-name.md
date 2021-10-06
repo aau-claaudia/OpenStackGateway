@@ -14,4 +14,8 @@ val Job.[openstackName](openstack-name.html): [String](https://kotlinlang.org/ap
 
 
 
+Given a ucloud job, add prefix to id to get openstack name
+
+
+
 

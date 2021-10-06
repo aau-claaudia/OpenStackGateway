@@ -14,4 +14,8 @@ val Stack.[ucloudId](ucloud-id.html): [String](https://kotlinlang.org/api/latest
 
 
 
+Given a stack, remove the name prefix to get ucloud id
+
+
+
 
