@@ -19,9 +19,11 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.collections.HashMap
 
-
+/**
+ * This class implements Uclouds JobController from the provider integration package
+ */
 @RestController
-@SecurityRequirement(name = "bearer-key") // Info til openapi interface
+@SecurityRequirement(name = "bearer-key") // Info for openapi interface
 class SimpleCompute(
     private val client: UCloudClient,
     private val openstackService: OpenStackService,
