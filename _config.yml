@@ -1,12 +1,54 @@
-theme: jekyll-theme-cayman
+site_name: Strato user documentation
+nav:
+  - Home: index.md
+  - Guides:
+      - "Overview": guides/overview.md
+      - "Matlab":
+          - "2021 B": guides/matlab.md
+          - "2021 A": guides/matlab.md
+          - "2020 B": guides/matlab.md
 
-lsi: false
-safe: true
-source: /
-incremental: false
-highlighter: rouge
-gist:
-  noscript: false
-kramdown:
-  math_engine: mathjax
-  syntax_highlighter: rouge
+      - Comsol: guides/comsol.md
+  - test:
+      - "Scary Coaster": test/test.md
+      - "Drop of Doom": test/test.md
+  - About: about.md
+
+theme:
+  name: material
+  #custom_dir: overrides
+  features:
+    - navigation.tabs
+    - navigation.instant
+    - toc.integrate
+    #- header.autohide
+
+  logo: assets/logo_round.png
+  favicon: assets/favicon.ico
+
+  font:
+    text: barlow
+
+  language: en
+
+extra_css:
+  - stylesheets/extra.css
+
+#repo_url: https://github.com/aau-claaudia
+
+
+extra:
+  social:
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/claaudia_aau
+      name: Claaudia on Twitter
+
+    - icon: fontawesome/solid/paper-plane
+      link: mailto:<claaudia@aau.dk>
+
+    - icon: fontawesome/solid/globe
+      link: https://www.claaudia.aau.dk/
+
+  generator: false
+
+copyright: Copyright &copy; 2021 - 2022 Claaudia
