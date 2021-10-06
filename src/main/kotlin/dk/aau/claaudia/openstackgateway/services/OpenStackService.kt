@@ -399,6 +399,13 @@ class OpenStackService(
         logger.info("Charge response:", response)
     }
 
+    /**
+     * Retrieve lastCharged timestamp from stack in openstack
+     *
+     * The timestamp is saved as a text tag on the stack and includes a prefix
+     * Get this timestamp, remove prefix and parse to Instant
+     * If timestamp not found, return creation timestamp from stack
+     */
     fun getLastChargedFromStack(stack: Stack): Instant {
         // TODO Consider storing lastcharged in database not openstack tags
 
@@ -413,6 +420,16 @@ class OpenStackService(
         }
     }
 
+    /**
+     * Update the lastCharged timestamp on a stack
+     *
+     * The process is rather convoluted and subject to change.
+     * In order to change the tag we have to do a stack update.
+     * This requires the stack template.
+     *
+     * Retrieve the template and remove the already saved ids.
+     * Create a stackUpdate and include the updated tag and the existing template and parameters
+     */
     fun updateStackLastCharged(listStack: Stack, chargedAt: Instant) {
         // FIXME Store in database not openstack tags
         // Alternatively: Store on metadata on instance
