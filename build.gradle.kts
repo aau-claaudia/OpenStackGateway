@@ -124,7 +124,7 @@ openApiGenerate {
 }
 
 tasks.dokkaJekyll.configure {
-    outputDirectory.set(buildDir.parentFile.resolve("documentation"))
+    outputDirectory.set(buildDir.parentFile.resolve("docs"))
 
     moduleName.set("OpenStackGateway")
 }
