@@ -16,6 +16,16 @@ title: ExtensionConfig
 
 class [ExtensionConfig](index.html)(openStackProperties: [OpenStackProperties](../../dk.aau.claaudia.openstackgateway.config/-open-stack-properties/index.html))
 
+Allow extension functions to use config
+
+
+
+## Constructors
+
+
+| | |
+|---|---|
+| [ExtensionConfig](-extension-config.html) | [jvm]<br>fun [ExtensionConfig](-extension-config.html)(openStackProperties: [OpenStackProperties](../../dk.aau.claaudia.openstackgateway.config/-open-stack-properties/index.html)) |
 
 
 ## Properties

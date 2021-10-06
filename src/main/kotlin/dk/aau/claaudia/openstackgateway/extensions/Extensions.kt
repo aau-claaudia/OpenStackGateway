@@ -15,7 +15,9 @@ inline fun getLogger(): Logger {
     return LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
 }
 
-// Allow extension functions to use config
+/**
+ * Allow extension functions to use config
+ */
 @Component
 class ExtensionConfig (openStackProperties: OpenStackProperties) {
     val config = openStackProperties
@@ -28,9 +30,15 @@ class ExtensionConfig (openStackProperties: OpenStackProperties) {
 
 private lateinit var c: ExtensionConfig
 
+/**
+ * Given a stack, remove the name prefix to get ucloud id
+ */
 val Stack.ucloudId: String
     get() = this.name.removePrefix(c.config.stackPrefix)
 
+/**
+ * Given a ucloud job, add prefix to id to get openstack name
+ */
 val Job.openstackName: String
     get() = "${c.config.stackPrefix}${this.id}"
 
