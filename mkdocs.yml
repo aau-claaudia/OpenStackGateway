@@ -1,17 +1,8 @@
 site_name: Strato user documentation
 nav:
-  - Home: index.md
+  - Home: README.md
   - Guides:
       - "Overview": guides/overview.md
-      - "Matlab":
-          - "2021 B": guides/matlab.md
-          - "2021 A": guides/matlab.md
-          - "2020 B": guides/matlab.md
-
-      - Comsol: guides/comsol.md
-  - test:
-      - "Scary Coaster": test/test.md
-      - "Drop of Doom": test/test.md
   - About: about.md
 
 theme:
