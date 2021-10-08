@@ -123,8 +123,8 @@ openApiGenerate {
     globalProperties.put("models", "")
 }
 
-tasks.dokkaJekyll.configure {
-    outputDirectory.set(buildDir.parentFile.resolve("docs"))
+tasks.dokkaGfm.configure {
+    outputDirectory.set(buildDir.parentFile.resolve("docs/code"))
 
     moduleName.set("OpenStackGateway")
 }

@@ -1,9 +1,8 @@
-site_name: Strato user documentation
+site_name: OpenStackGateway documentation
 nav:
   - Home: README.md
-  - Guides:
-      - "Overview": guides/overview.md
-  - About: about.md
+  - Code: code
+
 
 theme:
   name: material
@@ -25,7 +24,7 @@ theme:
 extra_css:
   - stylesheets/extra.css
 
-#repo_url: https://github.com/aau-claaudia
+repo_url: https://github.com/aau-claaudia/OpenStackGateway
 
 
 extra:
