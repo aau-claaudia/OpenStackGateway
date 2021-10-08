@@ -1,6 +1,6 @@
 site_name: OpenStackGateway documentation
 nav:
-  - Home: README.md
+  - Home: index.md
   - Code: code
 
 
