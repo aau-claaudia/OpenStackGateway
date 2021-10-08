@@ -1,7 +1,7 @@
 ---
-title: OpenStackGateway readme
+title: OpenStackGateway documentation
 ---
-//[OpenStackGateway](README.html)
+//[OpenStackGateway](index.html)
 
 
 # OpenStackGateway den i docs
@@ -13,12 +13,11 @@ This service facilitates communication between Ucloud and Claaudia OpenStack.
 It is a stateless service with an API built after UCloud provider specification.
 
 ## Documentation
-More detailed developer documentation can be found [here](docs/index.md)
-[here](docs/index.html)
+More detailed developer documentation can be found [here](code)
 
 This documentation is generated with [Dokka](https://github.com/Kotlin/dokka):
 
-`./gradlew dokkaJekyll`
+`./gradlew dokkaGfm`
 
 ## Technology
 The service is built with Kotlin and Spring Boot. 
