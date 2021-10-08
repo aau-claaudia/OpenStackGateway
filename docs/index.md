@@ -4,7 +4,7 @@ title: OpenStackGateway documentation
 //[OpenStackGateway](index.html)
 
 
-# OpenStackGateway den i docs
+# OpenStackGateway
 
 Compute provider API for UCloud
 
