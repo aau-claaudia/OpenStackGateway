@@ -34,6 +34,12 @@ class SimpleCompute(
         log.info("Simple compute init")
     }
 
+    /**
+     * Create stacks in openstack from ucloud job.
+     * Start each stack creation in openstack asynchronously with createStacks.
+     * Then start a task that monitors the stacks in openstack.
+     * When they start or report an error this message and status should be sent to ucloud.
+     */
     override fun create(request: BulkRequest<Job>) {
         log.info("Creating stacks: $request")
         openstackService.createStacks(request.items)
@@ -42,6 +48,15 @@ class SimpleCompute(
         openstackService.sendStatusWhenStackComplete(request.items)
     }
 
+    /**
+     * Delete specific stacks in openstack.
+     * It is important to make sure the ucloud jobs are charged before beeing deleted.
+     * The function chargeDeleteJobs will first send a charge request to ucloud
+     * and the start the deletion process.
+     * When an async task has been started for each job,
+     * then start a task that monitors the stacks in openstack.
+     * When they can no longer be found we assume deletion and status should be sent to ucloud.
+     */
     override fun delete(request: BulkRequest<Job>) {
         log.info("Charging and deleting jobs: $request")
         openstackService.chargeDeleteJobs(request.items)
@@ -50,6 +65,9 @@ class SimpleCompute(
         openstackService.monitorStackDeletions(request.items)
     }
 
+    /**
+     * This currently has no use for Virtual Machines and does nothing.
+     */
     override fun extend(request: BulkRequest<JobsProviderExtendRequestItem>) {
         log.info("Extending some jobs: $request")
         // TODO What does extend mean for a VM?
@@ -115,6 +133,11 @@ class SimpleCompute(
         //TODO()
     }
 
+    /**
+     * Provide ucloud with the available products.
+     * These are basically equivalent to openstack flavors but need to adhere to the ucloud format
+     * This includes information additonal information, e.g., product is Virtual Machine
+     */
     override fun retrieveProducts(request: Unit): JobsProviderRetrieveProductsResponse {
         log.info("Retrieving products")
 
@@ -150,15 +173,25 @@ class SimpleCompute(
         return response
     }
 
+    /**
+     * Unused for now
+     */
     override fun retrieveUtilization(request: Unit): JobsProviderUtilizationResponse {
         log.info("Retrieving utilization")
         return JobsProviderUtilizationResponse(CpuAndMemory(0.0, 0L), CpuAndMemory(0.0, 0L), QueueStatus(0, 0))
     }
 
+    /**
+     * Unused for now.
+     * Ucloud plans to implement this and we need to decide how to suspend stacks in openstack
+     */
     override fun suspend(request: BulkRequest<Job>) {
         log.info("suspend jobs: $request")
     }
 
+    /**
+     * Verify that ucloud has the corrent status of the provided jobs/stacks
+     */
     override fun verify(request: BulkRequest<Job>) {
         log.info("verify jobs: $request")
         openstackService.verifyJobs(request.items)
