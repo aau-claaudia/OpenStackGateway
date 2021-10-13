@@ -53,6 +53,14 @@ class OpenStackService(
 
     private val threadPool = Executors.newCachedThreadPool()
 
+    /**
+     * Handle openstack authentication.
+     * Returns an openstack client that is used for all openstack communication
+     * Uses the auth endpoint, projectId, username and password from config
+     *
+     * A token is cached and used to build a client on subsequent requests
+     * If the token has expired, authenticate to get a new one.
+     */
     private fun getClient(): OSClientV3 {
         //OSFactory.enableHttpLoggingFilter(true)
         if (token?.hasExpired() == false) {
@@ -120,6 +128,12 @@ class OpenStackService(
         return getClient().heat().stacks().getStackByName(name)
     }
 
+    /**
+     * Given a ucloud application name and version find the corresponding openstack image
+     * Since ucloud uses name and version and not a unique name/id
+     * we use this config mapping instead of a strict naming convention of images
+     * The config is also used to control which images are available
+     */
     fun mapImage(name: String, version: String): String {
         val image = provider.images.firstOrNull { it.ucloudName == name && it.ucloudVersion == version }
 
@@ -136,6 +150,12 @@ class OpenStackService(
         }
     }
 
+    /**
+     * Prepare parameters for the stack template
+     * This parses ucloud application properties to a map that matches parameters in the stack template
+     * For now, there are some hardcoded parameters since we only use a single template
+     *
+     */
     fun prepareParameters(job: Job): MutableMap<String, String> {
         val parameters = mutableMapOf<String, String>()
 
@@ -168,6 +188,11 @@ class OpenStackService(
         return parameters
     }
 
+    /**
+     * Start the process of creating stacks from ucloud jobs
+     * For now, we use a single template, but this can change in the future.
+     * For each job start an asynchronous task
+     */
     fun createStacks(jobs: List<Job>) {
         logger.info("creating stacks: $jobs.size")
 
@@ -180,6 +205,17 @@ class OpenStackService(
         }
     }
 
+    /**
+     * Parse parameters from the ucloud job, send parameters and template to openstack in a createStack request
+     *
+     * Verification is done in order to detect missing required template parameters
+     * Verify that flavor, image and security group exists in openstack
+     *
+     * If anything is missing, send a status update to ucloud with a job failed status.
+     *
+     * @property template the openstack stack template to create a stack from
+     * @property job the ucloud job to get parameters from
+     */
     fun asyncStackCreation(job: Job, template: Template) {
         threadPool.execute {
             // Try to create the stack and report any errors to ucloud
@@ -236,6 +272,15 @@ class OpenStackService(
         }
     }
 
+    /**
+     * Send a stack creation request to openstack.
+     * Use the openstack4j builder to create the request and send it to openstack
+     * We don't return anything here because, since tasks are started to monitor the creation.
+     *
+     * @property name the name of the stack to be created
+     * @property template openstack stack template to be used
+     * @property parameters the stack parameters for the template
+     */
     fun createStack(name: String, template: String, parameters: MutableMap<String, String>) {
         logger.info("Create stack: $name", template, parameters)
 
@@ -254,6 +299,14 @@ class OpenStackService(
         client.heat().stacks().create(build)
     }
 
+    /**
+     * Monitor a list of jobs and send status to ucloud when jobs are running or failed
+     *
+     * For each job start an async task that polls openstack for the corresponding stack
+     * Based on the config, have a delay between each poll and a timeout to stop polling.
+     * When the job is found in a create complete state, send the output IP to ucloud in a job success update
+     * If this IP is not found or the stack isnt created within the timeout, send a job failed update
+     */
     fun sendStatusWhenStackComplete(jobs: List<Job>) {
         Thread.sleep(5000) // TODO Status is not set if we change this too quickly (https://github.com/SDU-eScience/UCloud/issues/2303)
 
@@ -279,13 +332,16 @@ class OpenStackService(
                     logger.info("Waiting to retry")
                     Thread.sleep(config.monitor.delay)
                 }
-                // Job could not be started
+                // Job could not be started within the timeout
                 sendJobFailedMessage(job.id, "Could not start job. Timeout exceeded")
                 return@execute
             }
         }
     }
 
+    /**
+     * A shortcut function for sending job failed update message
+     */
     fun sendJobFailedMessage(jobId: String, message: String) {
         sendJobStatusMessage(
             jobId,
@@ -294,6 +350,9 @@ class OpenStackService(
         )
     }
 
+    /**
+     * A shortcut function for sending job success update message
+     */
     fun sendJobRunningMessage(jobId: String, message: String) {
         sendJobStatusMessage(
             jobId,
@@ -302,6 +361,12 @@ class OpenStackService(
         )
     }
 
+    /**
+     * This sends a JobsControlUpdateRequest to ucloud.
+     * @property jobId the ucloud jobid
+     * @property state the ucloud JobState the job should have
+     * @property message a custom message that is shown in ucloud on the job page
+     */
     fun sendJobStatusMessage(jobId: String, state: JobState, message: String) {
         JobsControl.update.call(
             JobsControlUpdateRequest(
@@ -537,6 +602,13 @@ class OpenStackService(
         }
     }
 
+    /**
+     * Verify a jobs status matches the status of the corresponding stack in openstack
+     * If no stack found in openstack, assume deleted and send status update to ucloud
+     *
+     * The function contains a map statusMappings that maps the openstack statuses to the ucloud job statuses
+     * If the stack status is different than the expected send an status update to ucloud.
+     */
     fun verifyJob(job: Job) {
         val stack = getStackByName(job.openstackName)
 

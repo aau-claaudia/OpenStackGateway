@@ -4,3 +4,5 @@
 
 [jvm]\
 open override fun [extend](extend.md)(request: BulkRequest&lt;JobsProviderExtendRequestItem&gt;)
+
+This currently has no use for Virtual Machines and does nothing.

@@ -4,3 +4,5 @@
 
 [jvm]\
 open override fun [retrieveUtilization](retrieve-utilization.md)(request: [Unit](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)): JobsProviderUtilizationResponse
+
+Unused for now

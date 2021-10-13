@@ -4,3 +4,5 @@
 
 [jvm]\
 fun [sendJobRunningMessage](send-job-running-message.md)(jobId: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), message: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html))
+
+A shortcut function for sending job success update message
