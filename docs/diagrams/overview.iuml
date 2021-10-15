@@ -1,0 +1,23 @@
+@startuml
+title System overview
+actor user
+folder SDU {
+  agent UCloud as ucloud
+}
+folder AAU {
+  agent OpenStackGateway as osg
+  node OpenStack as openstack
+  node "Virtual Machine 1" as vm1
+  node "Virtual Machine 2" as vm2
+  node "Virtual Machine n" as vmn
+}
+
+ucloud <-[thickness=2]-> user
+ucloud <-[thickness=2]> osg
+osg <-[thickness=2]-> openstack
+openstack -- vm1
+openstack -- vm2
+openstack -- vmn
+user <--[dashed,thickness=2]> vm1
+
+@enduml

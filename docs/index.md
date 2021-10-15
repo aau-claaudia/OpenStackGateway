@@ -9,11 +9,21 @@ title: OpenStackGateway documentation
 Compute provider API for UCloud
 
 ## Overview
-This service facilitates communication between Ucloud and Claaudia OpenStack.
-It is a stateless service with an API built after UCloud provider specification.
+
+![Overview](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/aau-claaudia/OpenStackGateway/provider-support/docs/diagrams/overview.iuml)
+
+This service facilitates communication between UCloud and Claaudia OpenStack.
+In UCloud terms, this is a compute provider, that provides a compute service to UCloud.
+It is a stateless service with an API based on this example:
+[UCloud Spring Boot Example](https://github.com/SDU-eScience/UCloud/tree/master/provider-integration/spring-boot-example)
+
+It implements this interface: [JvmProviderSupport](https://github.com/SDU-eScience/UCloud/tree/master/backend/jvm-provider-support) 
+
+See UClouds [Compute Provider Documentation](https://docs.cloud.sdu.dk/dev/backend/app-orchestrator-service/wiki/provider.html#authentication-and-authorization)
+
 
 ## Documentation
-More detailed developer documentation can be found [here](code)
+[Service documentation on code level](code)
 
 This documentation is generated with [Dokka](https://github.com/Kotlin/dokka):
 
@@ -22,6 +32,8 @@ This documentation is generated with [Dokka](https://github.com/Kotlin/dokka):
 ## Technology
 The service is built with Kotlin and Spring Boot. 
 It uses the gradle build tool 
+
+
 
 
 ## Swagger
@@ -34,8 +46,9 @@ to test the provider API.
 
 For the manual insertion endpoint there is an example [here](src/test/resources/requests/temp-job-request-example.json).
 
-## Security
+## Athentication and Authorization
 
+UCloud and the provider
 This is handled by UClouds provider integration module: [Jvm-Provider-Support](https://github.com/SDU-eScience/UCloud/tree/master/backend/jvm-provider-support)
 A certificate and a refresh_token is added to the config and used to authenticate 
 the provider integration module on inbound and outbound requests.
