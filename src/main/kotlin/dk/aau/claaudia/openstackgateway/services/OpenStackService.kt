@@ -333,7 +333,7 @@ class OpenStackService(
                     Thread.sleep(config.monitor.delay)
                 }
                 // Job could not be started within the timeout
-                sendJobFailedMessage(job.id, "Could not start job. Timeout exceeded")
+                logger.info("Could not start job within timeout: $job.id")
                 return@execute
             }
         }
