@@ -57,7 +57,7 @@ See more here: [UCloud Compute Providers](https://github.com/SDU-eScience/UCloud
 The gateway currently exposes the following endpoints for ucloud:
 
 ### Create
-Start one or more stacks in openstack
+Start one or more compute jobs by creating stacks in openstack
 
 One or more jobs are received from ucloud and is assumed to be ready to start.
 The ucloud jobs are converted to openstack stack format and sent to openstack.
@@ -66,9 +66,16 @@ Without waiting for the stacks to start respond to ucloud.
 A monitoring thread is started for each stack that will send a status update to ucloud when you stack has successfully started or failed.
 
 Sequence diagram for the create flow
+
 ![Overview](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/aau-claaudia/OpenStackGateway/provider-support/docs/diagrams/create-stack-sequence.iuml)
 
 #### Delete
+Deletes one or more compute jobs by deleting stacks in OpenStack
+
+The corresponding stacks are found in OpenStack and delete requests are sent
+The provider should not only stop the compute job but also delete
+    * _compute_ related resources. For example, if the job is a virtual machine job, the underlying machine
+    * should also be deleted. None of the resources attached to the job, however, should be deleted.
 #### Extend
 #### Suspend
 #### Verify
