@@ -1,0 +1,26 @@
+@startuml
+title Job/Stack creation flow
+participant "User" as user
+participant "UCloud" as ucloud
+participant "OpenStackGateway" as osg
+participant "OpenStack" as openstack
+
+user -> ucloud++: Job Create request
+ucloud -> osg++: Job Create request
+osg --> ucloud: Job Create response
+ucloud --> user--: Job Create response
+osg -> openstack: Create Stack request
+openstack --> osg: Create Stack response
+|||
+loop until timeout or status is created or failed
+osg -> openstack: Stack Status request
+openstack --> osg: Stack Status response
+alt status=created
+osg --> ucloud: Job Created Success request
+ucloud --> user: Job Created event
+else status=failed
+osg -> ucloud--: Job Failed Request
+ucloud --> user: Job Failed event
+end
+end
+@enduml

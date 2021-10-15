@@ -34,8 +34,6 @@ The service is built with Kotlin and Spring Boot.
 It uses the gradle build tool 
 
 
-
-
 ## Swagger
 The swagger ui can be reached at the base url.
 Authentication is enabled, and a Bearer token can be added using the "Authorize" button.
@@ -54,23 +52,36 @@ A certificate and a refresh_token is added to the config and used to authenticat
 the provider integration module on inbound and outbound requests.
 See more here: [UCloud Compute Providers](https://github.com/SDU-eScience/UCloud/tree/master/provider-integration/integration-module)
 
-### PRELIMINARY UCloud Provider API Spec:
-This is outdated and subject to change!
+## API
 
-[Provider API](specs/ProviderAPI.html)
+The gateway currently exposes the following endpoints for ucloud:
 
-# DEPRECATED Model generation.
+### Create
+Start one or more stacks in openstack
 
-`./gradlew openApiGenerate`
+One or more jobs are received from ucloud and is assumed to be ready to start.
+The ucloud jobs are converted to openstack stack format and sent to openstack.
+Without waiting for the stacks to start respond to ucloud.
 
-can be used to generate models
-Not everything works however. I needed to use the bulkrequest model from ucloud as well as some modifications to them.
-This will need to be updated in the future.
-It uses the spec definition from the specs folder.
+A monitoring thread is started for each stack that will send a status update to ucloud when you stack has successfully started or failed.
 
-# Deployments
+Sequence diagram for the create flow
+![Overview](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/aau-claaudia/OpenStackGateway/provider-support/docs/diagrams/create-stack-sequence.iuml)
 
-To be written
+#### Delete
+#### Extend
+#### Suspend
+#### Verify
+#### Retrieve Products
+#### openInteractiveSession
+Todo: Not implemented
+
+#### retrieveUtilization
+
+
+# Deployment
+
+Todo
 
 # Openstack compute flavors
 The general compute flavors are based on deic's type1 descriptions available [somewhere](somewhere).
