@@ -65,26 +65,42 @@ Without waiting for the stacks to start respond to ucloud.
 
 A monitoring thread is started for each stack that will send a status update to ucloud when you stack has successfully started or failed.
 
-Sequence diagram for the create flow
+#### Sequence diagram for the create flow
 
 ![Overview](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/aau-claaudia/OpenStackGateway/provider-support/docs/diagrams/create-stack-sequence.iuml)
 
-#### Delete
+### Delete
 Deletes one or more compute jobs by deleting stacks in OpenStack
 
-The corresponding stacks are found in OpenStack and delete requests are sent
-The provider should not only stop the compute job but also delete
-    * _compute_ related resources. For example, if the job is a virtual machine job, the underlying machine
-    * should also be deleted. None of the resources attached to the job, however, should be deleted.
-#### Extend
-#### Suspend
-#### Verify
-#### Retrieve Products
-#### openInteractiveSession
+The corresponding stacks are found in OpenStack and delete requests are sent.
+### Extend
+Todo: Not implemented / Not applicable for virtual machines
+
+### Suspend
 Todo: Not implemented
 
-#### retrieveUtilization
+This should suspend the virtual machine without deleting any of its resources
+### Verify
+Verify UClouds Job status is synchronized with openstack stack status
 
+FIXME: Is this called for deleted ucloud jobs?
+
+This call is periodically executed by UCloud.
+The expected status is compared with the actual status in OpenStack and 
+a status update is sent if there is a difference.
+
+If the stack could not be found in OpenStack send a status update with Job success to UCloud.
+      
+The gateway does not attempt to start the stack.
+### Retrieve Products
+Provide ucloud with the available products. 
+These are basically equivalent to openstack flavors but need to adhere to the ucloud format
+This includes information additional information, e.g., product is Virtual Machine
+### OpenInteractiveSession
+Todo: Not implemented
+
+### RetrieveUtilization
+Todo: Not implemented
 
 # Deployment
 
