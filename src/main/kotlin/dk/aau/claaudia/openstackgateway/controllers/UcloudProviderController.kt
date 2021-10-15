@@ -136,7 +136,7 @@ class SimpleCompute(
     /**
      * Provide ucloud with the available products.
      * These are basically equivalent to openstack flavors but need to adhere to the ucloud format
-     * This includes information additonal information, e.g., product is Virtual Machine
+     * This includes information additional information, e.g., product is Virtual Machine
      */
     override fun retrieveProducts(request: Unit): JobsProviderRetrieveProductsResponse {
         log.info("Retrieving products")
