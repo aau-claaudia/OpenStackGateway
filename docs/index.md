@@ -73,6 +73,11 @@ A monitoring thread is started for each stack that will send a status update to 
 Deletes one or more compute jobs by deleting stacks in OpenStack
 
 The corresponding stacks are found in OpenStack and delete requests are sent.
+
+#### Sequence diagram for the delete flow
+
+![Overview](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/aau-claaudia/OpenStackGateway/provider-support/docs/diagrams/delete-stack-sequence.iuml)
+
 ### Extend
 Todo: Not implemented / Not applicable for virtual machines
 

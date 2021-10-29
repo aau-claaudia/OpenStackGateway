@@ -9,23 +9,23 @@ user -> ucloud++: Job Create request
 ucloud -> osg++: Job Create request
 osg --> ucloud: Job Create response
 ucloud --> user--: Job Create response
-osg -> openstack: Verify template parameters
-openstack --> osg: Verify response
+osg -> openstack++: Verify template parameters
+openstack --> osg--: Verify response
 alt not verified
-osg -> ucloud: Job Failed Request
+osg -> ucloud: Job Status Request: Created Failed
 ucloud -> user: Job Failed event
 else verified
-osg -> openstack: Create Stack request
-openstack --> osg: Create Stack response
+osg -> openstack++: Create Stack request
+openstack --> osg--: Create Stack response
 |||
 loop until timeout or status is created or failed
-osg -> openstack: Stack Status request
-openstack --> osg: Stack Status response
+osg -> openstack++: Stack Status request
+openstack --> osg--: Stack Status response
 alt status=created
-osg -> ucloud: Job Created Success request
+osg -> ucloud: Job Status Request: Created Success
 ucloud -> user: Job Created event
 else status=failed
-osg -> ucloud--: Job Failed request
+osg -> ucloud--: Job Status Request: Create Failed
 ucloud -> user: Job Failed event
 end
 end
