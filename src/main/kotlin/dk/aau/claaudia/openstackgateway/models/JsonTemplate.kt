@@ -8,5 +8,5 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 class JsonTemplate (
-    val parameters: Map<String, Map<String, String>>
+    val parameters: Map<String, Map<String, Any>>
 )

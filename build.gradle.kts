@@ -1,19 +1,21 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.dokka.gradle.DokkaTask
 
-val openstack4jVersion = "3.8"
-val jacksonVersion = "2.12.0"
-val kotlinVersion = "1.4.20"
+val openstack4jVersion = "3.10"
+val jacksonVersion = "2.13.0"
+val kotlinVersion = "1.5.31"
 
 plugins {
-    id("org.springframework.boot") version "2.4.0"
-    id("io.spring.dependency-management") version "1.0.10.RELEASE"
-    kotlin("jvm") version "1.4.20"
-    kotlin("plugin.spring") version "1.4.20"
-    kotlin("plugin.jpa") version "1.4.20"
-    kotlin("plugin.allopen") version "1.4.20"
-    kotlin("kapt") version "1.4.20"
+    id("org.springframework.boot") version "2.5.5"
+    id("io.spring.dependency-management") version "1.0.11.RELEASE"
+    kotlin("jvm") version "1.5.31"
+    kotlin("plugin.spring") version "1.5.31"
+    kotlin("plugin.jpa") version "1.5.31"
+    kotlin("plugin.allopen") version "1.5.31"
+    kotlin("kapt") version "1.5.31"
     id("org.liquibase.gradle") version "2.0.4"
     id("org.openapi.generator") version "5.0.0"
+    id("org.jetbrains.dokka") version "1.5.30"
 }
 
 allOpen {
@@ -27,22 +29,58 @@ version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
 repositories {
+    mavenLocal()
     mavenCentral()
+    maven {
+        name = "UCloud Packages"
+        url = uri("https://maven.pkg.github.com/sdu-escience/ucloud")
+        credentials {
+            val helpText = """
+
+
+
+
+
+				Missing GitHub credentials. These are required to pull the packages required for this project. Please
+				create a personal access token here: https://github.com/settings/tokens. This access token require
+				the 'read:packages' scope.
+
+				With this information you will need to add the following lines to your Gradle properties
+				(~/.gradle/gradle.properties):
+
+				gpr.user=YOUR_GITHUB_USERNAME
+				gpr.token=YOUR_GITHUB_PERSONAL_ACCESS_TOKEN
+
+
+
+
+
+			""".trimIndent()
+            username = (project.findProperty("gpr.user") as? String?)
+                ?: System.getenv("PACKAGES_USERNAME") ?: error(helpText)
+            password = (project.findProperty("gpr.key") as? String?)
+                ?: System.getenv("PACKAGES_TOKEN") ?: error(helpText)
+        }
+    }
 }
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-webflux:2.4.2")
-    implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.cloud:spring-cloud-starter-config:3.0.1")
-    implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.0.1")
-    implementation("com.auth0:java-jwt:3.12.1")
+    implementation("org.springframework.boot:spring-boot-starter-webflux:2.5.5")
+    implementation("org.springframework.cloud:spring-cloud-starter-config:3.0.5")
+    implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.0.4")
+    implementation("com.auth0:java-jwt:3.18.2")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
-    implementation("org.springdoc:springdoc-openapi-ui:1.4.8")
+    implementation("org.springdoc:springdoc-openapi-ui:1.5.10")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.github.openstack4j.core:openstack4j-core:$openstack4jVersion")
     implementation("com.github.openstack4j.core.connectors:openstack4j-httpclient:$openstack4jVersion")
+
+    implementation("dk.sdu.cloud:jvm-provider-support-jvm:2021.2.0-storage0")
+    implementation("com.squareup.okhttp3:okhttp:4.9.1")
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
+
     implementation("org.liquibase:liquibase-core:4.2.2")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
@@ -55,7 +93,7 @@ dependencies {
     }
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-    testImplementation("com.ninja-squad:springmockk:1.1.3")
+    testImplementation("com.ninja-squad:springmockk:3.0.1")
 
     kapt("org.springframework.boot:spring-boot-configuration-processor")
 }
@@ -83,4 +121,10 @@ openApiGenerate {
     generateModelDocumentation.set(false)
     //Only generate models for now
     globalProperties.put("models", "")
+}
+
+tasks.dokkaGfm.configure {
+    outputDirectory.set(buildDir.parentFile.resolve("docs/code"))
+
+    moduleName.set("OpenStackGateway")
 }

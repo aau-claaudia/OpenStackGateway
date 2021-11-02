@@ -18,8 +18,9 @@ public class TemplateService(
     private val mapper: ObjectMapper
 ) {
 
+    // This list of templates could be expanded and maybe saved elsewhere
     val templates = mapOf(
-        "simple-stack" to "/heat-templates/simple-stack.yaml"
+        "ucloud" to "/heat-templates/ucloud-provisioned-stack.yaml"
     )
 
     fun getTemplate(name: String): Template {
@@ -30,7 +31,7 @@ public class TemplateService(
     }
 
     fun getTestTemplate(): Template {
-        val template = this::class.java.getResource("/heat-templates/simple-stack.yaml").readText(Charsets.UTF_8)
+        val template = this::class.java.getResource(templates["ucloud"]).readText(Charsets.UTF_8)
         validateTemplate(template)
 
         return Builders.template().templateJson(template).build()
@@ -52,10 +53,18 @@ public class TemplateService(
     }
 
     // TODO move these util functions somewhere else. Consider an extension function on heat Template??
-    fun extractParameters(template: Template): Map<String, Map<String, String>> {
+    fun extractParameters(template: Template): Map<String, Map<String, Any>> {
         val t: JsonTemplate = mapper.readValue(template.templateJson, JsonTemplate::class.java)
 
         return t.parameters
+    }
+
+    fun findMissingParameters(template: Template, providedParameters: Map<String, String>): List<String> {
+        // Verify . Extract params from template and compare with provided params.
+        val templateParameters = extractParameters(template)
+        val requiredParameters =
+            templateParameters.filter { (_, parameter) -> !parameter.containsKey("default") }.map { it.key }
+        return requiredParameters.filter { it -> it !in providedParameters.keys }
     }
 
     companion object {
