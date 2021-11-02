@@ -28,14 +28,14 @@ data class UCloudProperties(
 
 //This adds an additional interceptor but cannot remove the one from the providerlibrary
 @Configuration
-@Profile("prod", "test", "dev", "local")
+@Profile("prod", "test", "dev")//, "local")
 class UCloudSpringConfigTest(
     private val interceptor: UCloudAuthInterceptor,
     private val requestInterceptor: UcloudRequestInterceptor
 ) : WebMvcConfigurer {
     @Primary
     override fun addInterceptors(registry: InterceptorRegistry) {
-        // This is disabled for test. Find a way to test authentication without getting a token from ucloud
+        // This is disabled for unittest profile. Find a way to test authentication without getting a token from ucloud
         // Consider removing this line from provider package
         registry.addInterceptor(interceptor).addPathPatterns("/ucloud/**")
 

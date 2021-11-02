@@ -141,6 +141,8 @@ class SimpleCompute(
     override fun retrieveProducts(request: Unit): JobsProviderRetrieveProductsResponse {
         log.info("Retrieving products")
 
+        //TODO Get products from openstack flavors openstackService.listFlavors()
+
         val response = JobsProviderRetrieveProductsResponse(
             provider.products.map { product ->
                 ComputeProductSupport(
