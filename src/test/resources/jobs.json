@@ -1,0 +1,62 @@
+{
+  "items": [
+    {
+      "id": "15ec59be-e034-4cc6-b02d-e95fa3989701",
+      "owner": {
+        "createdBy": "user",
+        "project": "92c5abd5-29d5-4c0d-9c05-8d3485f8c138"
+      },
+      "updates": [
+        {
+          "timestamp": 1624441287264,
+          "state": "IN_QUEUE",
+          "status": "UCloud has accepted your job into the queue"
+        }
+      ],
+      "billing": {
+        "creditsCharged": 0,
+        "pricePerUnit": 100000,
+        "__creditsAllocatedToWalletDoNotDependOn__": 10000000000
+      },
+      "specification": {
+        "application": {
+          "name": "aau-ubuntu-vm",
+          "version": "20.04"
+        },
+        "product": {
+          "id": "ucloud_taste",
+          "category": "standard",
+          "provider": "aau3"
+        },
+        "name": "test123",
+        "replicas": 1,
+        "allowDuplicateJob": false,
+        "parameters": {
+          "public_ssh_keys": {
+            "type": "text",
+            "value": "sdfsdf"
+          }
+        },
+        "resources": [],
+        "timeAllocation": {
+          "hours": 1,
+          "minutes": 0,
+          "seconds": 0
+        },
+        "resolvedProduct": null,
+        "resolvedApplication": null,
+        "resolvedSupport": null
+      },
+      "status": {
+        "state": "IN_QUEUE",
+        "startedAt": null,
+        "expiresAt": null
+      },
+      "createdAt": 1624441287264,
+      "output": {
+        "outputFolder": "/projects/92c5abd5-29d5-4c0d-9c05-8d3485f8c138/Members' Files/user/Jobs/Ubuntu 20.04 (Virtual Machine) ver 2/test123-15ec59be"
+      },
+      "acl": null
+    }
+  ]
+}

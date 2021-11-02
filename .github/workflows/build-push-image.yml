@@ -26,9 +26,18 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v2
         with:
+          build-args: |
+            "PACKAGES_USERNAME=${{ secrets.PACKAGES_USERNAME }}"
+            "PACKAGES_TOKEN=${{ secrets.PACKAGES_TOKEN }}"
           push: true
           tags: |
             ghcr.io/aau-claaudia/openstackgateway:${{ env.GITHUB_SHA_SHORT }}
+      - name: Build documentation
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+      - run: pip install mkdocs-material
+      - run: mkdocs gh-deploy --force
 
   test:
     runs-on: ubuntu-latest

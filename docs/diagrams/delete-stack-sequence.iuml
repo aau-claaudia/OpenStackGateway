@@ -1,0 +1,32 @@
+@startuml
+!theme cerulean-outline
+title Job/Stack deletion flow
+participant "User" as user
+participant "UCloud" as ucloud
+participant "OpenStackGateway" as osg
+participant "OpenStack" as openstack
+
+user -> ucloud++: Job Delete request
+ucloud -> osg++: Job Delete request
+osg --> ucloud: Job Delete response
+ucloud --> user--: Job Delete response
+
+osg -> openstack++: Charge Stack request
+openstack -> osg--: Charge Stack response
+osg -> openstack++: Delete Stack request
+openstack -> osg--:  Stack request response
+
+
+loop until timeout or stack not found
+osg -> openstack++: Stack Status request
+openstack --> osg--: Stack Status response
+alt job not found (assume deleted)
+osg -> ucloud: Job Status Request: Delete Success
+ucloud -> user: Job Deleted event
+else status=timeout
+osg -> ucloud--: Job Status Request: Delete Failed
+ucloud -> user: Job Delete Failed event
+
+end
+end
+@enduml
