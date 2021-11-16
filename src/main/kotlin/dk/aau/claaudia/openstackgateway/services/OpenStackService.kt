@@ -112,6 +112,10 @@ class OpenStackService(
         return list
     }
 
+    fun getFlavorExtraSpecs(id: String?): MutableMap<String, String> {
+        return getClient().compute().flavors().listExtraSpecs(id)
+    }
+
     fun getFlavorById(id: String?): Flavor? {
         val flavor = getClient().compute().flavors().get(id)
         logger.info("flavor by id: $flavor")
@@ -262,6 +266,7 @@ class OpenStackService(
             } catch (e: Exception) {
                 // Not really nice to catch all exceptions here is it...
 
+                logger.error("Exception $e.message")
                 sendJobFailedMessage(job.id, e.message as String)
 
                 // Raise exception for logging

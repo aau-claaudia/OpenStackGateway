@@ -2,6 +2,7 @@ package dk.aau.claaudia.openstackgateway.controllers
 
 
 import dk.aau.claaudia.openstackgateway.config.ProviderProperties
+import dk.aau.claaudia.openstackgateway.config.UCloudProperties
 import dk.aau.claaudia.openstackgateway.services.OpenStackService
 import dk.sdu.cloud.CommonErrorMessage
 import dk.sdu.cloud.accounting.api.ProductReference
@@ -28,8 +29,9 @@ class SimpleCompute(
     private val client: UCloudClient,
     private val openstackService: OpenStackService,
     wsDispatcher: UCloudWsDispatcher,
-    private val provider: ProviderProperties,
-) : JobsController(provider.id, wsDispatcher) {
+    private val providerProperties: ProviderProperties,
+    private val uCloudProperties: UCloudProperties,
+) : JobsController(providerProperties.id, wsDispatcher) {
     init {
         log.info("Simple compute init")
     }
@@ -137,40 +139,45 @@ class SimpleCompute(
      * Provide ucloud with the available products.
      * These are basically equivalent to openstack flavors but need to adhere to the ucloud format
      * This includes information additional information, e.g., product is Virtual Machine
+     * For now there is only a single product category but that can be expanded and maybe saved as tags on flavors
+     * All information about ComputeSupport is also hardcoded for now
      */
     override fun retrieveProducts(request: Unit): JobsProviderRetrieveProductsResponse {
         log.info("Retrieving products")
 
-        //TODO Get products from openstack flavors openstackService.listFlavors()
-
         val response = JobsProviderRetrieveProductsResponse(
-            provider.products.map { product ->
+            openstackService.listFlavors().filterNotNull().map { flavor ->
                 ComputeProductSupport(
-                    ProductReference(product.id, product.category, provider.id),
+                    ProductReference(
+                        flavor.name,
+                        openstackService.getFlavorExtraSpecs(flavor.id).getOrDefault(
+                            "category", providerProperties.defaultProductCategory),
+                        providerProperties.id),
                     ComputeSupport(
                         ComputeSupport.Docker(
-                            enabled = product.support.docker.enabled,
-                            web = product.support.docker.web,
-                            vnc = product.support.docker.vnc,
-                            logs = product.support.docker.logs,
-                            terminal = product.support.docker.terminal,
-                            peers = product.support.docker.peers,
-                            timeExtension = product.support.docker.timeExtension,
-                            utilization = product.support.docker.utilization
+                            enabled = false,
+                            web = false,
+                            vnc = false,
+                            logs = false,
+                            terminal = false,
+                            peers = false,
+                            timeExtension = false,
+                            utilization = false
                         ),
                         ComputeSupport.VirtualMachine(
-                            enabled = product.support.virtualMachine.enabled,
-                            logs = product.support.virtualMachine.logs,
-                            vnc = product.support.virtualMachine.vnc,
-                            terminal = product.support.virtualMachine.terminal,
-                            suspension = product.support.virtualMachine.suspension,
-                            timeExtension = product.support.virtualMachine.timeExtension,
-                            utilization = product.support.virtualMachine.utilization
+                            enabled = true,
+                            logs = false,
+                            vnc = false,
+                            terminal = false,
+                            suspension = false,
+                            timeExtension = false,
+                            utilization = false
                         )
                     )
                 )
             }
         )
+
         logger().info(response.toString())
         return response
     }

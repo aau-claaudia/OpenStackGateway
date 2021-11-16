@@ -107,6 +107,23 @@ Todo: Not implemented
 ### RetrieveUtilization
 Todo: Not implemented
 
+## Scheduled Tasks
+Scheduled by the Spring Framework for doing maintenance and job charging
+
+### ChargeAllStacks
+Charges the corresponding UCloud job for all active OpenStack stacks.
+This is run every 15 minutes and each execution will charge each stack the amount of time since it was last charged.
+To keep track of this a timestamp is saved as a tag on the stack in OpenStack.
+We only charge stacks that have status: "CREATE_COMPLETE" or "UPDATE_COMPLETE".
+
+- Get the corresponding job from ucloud to make sure it exists, return if not
+  - Amount to charge = time between the lastCharged timestamp and now.
+- Maintain lastCharged for each stack as a tag on the stack in openstack.
+  - lastCharged is the moment the stack was charged last.
+- The first time a stack is charged, use its creation time as lastCharged
+
+
+
 # Deployment
 
 Todo

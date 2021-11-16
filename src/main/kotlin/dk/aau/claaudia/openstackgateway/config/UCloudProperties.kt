@@ -14,17 +14,18 @@ import org.springframework.web.filter.CommonsRequestLoggingFilter
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
-
+/**
+ * This is used by the provider library
+ */
 @ConstructorBinding
 @ConfigurationProperties("ucloud")
 data class UCloudProperties(
     val certificate: String,
-    val providerId: String,
     val refreshToken: String,
     val host: String,
     val tls: Boolean,
     val port: Int
-)
+    )
 
 //This adds an additional interceptor but cannot remove the one from the providerlibrary
 @Configuration
