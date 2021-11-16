@@ -128,6 +128,12 @@ We only charge stacks that have status: "CREATE_COMPLETE" or "UPDATE_COMPLETE".
 
 Todo
 
+
+# Config
+
+TODO: 
+Her skal stå det er vigtigt man sætter Metadata på flavors: Category
+
 # Openstack compute flavors
 The general compute flavors are based on deic's type1 descriptions available [somewhere](somewhere).
 
