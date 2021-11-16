@@ -1,15 +1,15 @@
 package dk.aau.claaudia.openstackgateway
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.ninjasquad.springmockk.MockkBean
 import dk.aau.claaudia.openstackgateway.services.OpenStackService
 import dk.aau.claaudia.openstackgateway.services.TemplateService
 import dk.aau.claaudia.openstackgateway.tasks.Jobs
 import dk.sdu.cloud.providers.UCloudClient
 import io.mockk.every
-//import dk.aau.claaudia.openstackgateway.services.UCloudService
 import org.junit.jupiter.api.Test
-import org.openstack4j.model.heat.Stack
-import org.openstack4j.openstack.common.GenericLink
+import org.openstack4j.openstack.compute.domain.NovaFlavor
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -25,10 +25,12 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 @WebMvcTest
 @ActiveProfiles("unittest")
-class HttpControllersTests(@Autowired val mockMvc: MockMvc) {
+class HttpControllersTests(
+    @Autowired val mockMvc: MockMvc
+    ) {
 
     @MockkBean
-    private lateinit var openStackService: OpenStackService
+    private lateinit var openstackService: OpenStackService
 
     @MockkBean
     private lateinit var templateService: TemplateService
@@ -51,7 +53,7 @@ class HttpControllersTests(@Autowired val mockMvc: MockMvc) {
     @Test
     fun `Test test`() {
 
-        every { openStackService.chargeAllStacks() } returns Unit
+        every { openstackService.chargeAllStacks() } returns Unit
 
         mockMvc.perform(
             get("/charge"))
@@ -69,6 +71,8 @@ class HttpControllersTests(@Autowired val mockMvc: MockMvc) {
 
     @Test
     fun `Given bearer token expect 200 access response`() {
+        every { openstackService.listFlavors() } returns emptyList()
+
         mockMvc.perform(
             get("/ucloud/testcenter/jobs/retrieveProducts")
                 //.header(HttpHeaders.AUTHORIZATION, authHeader)
@@ -78,14 +82,54 @@ class HttpControllersTests(@Autowired val mockMvc: MockMvc) {
 
     @Test
     fun `Retrieve products`() {
-        val expectedProducts = ClassPathResource("products.json").file.readText()
+        val expectedProductOutput = ClassPathResource("products.json").file.readText()
+
+        val flavorsJson =
+            """
+            [
+            {
+              "id": "1195aefc-09fb-4bc7-b1f0-f21a304e864c",
+              "name": "small 8GB"
+            },
+            {
+              "id": "2295aefc-09fb-4bc7-b1f0-f21a304e864c",
+              "name": "medium 16GB"
+            },
+            {
+              "id": "3395aefc-09fb-4bc7-b1f0-f21a304e864c",
+              "name": "large 32GB"
+            },
+            {
+              "id": "4495aefc-09fb-4bc7-b1f0-f21a304e864c",
+              "name": "uc-t4-1"
+            }
+            ]
+            """
+
+        val mapper = jacksonObjectMapper()
+        val flavors: List<NovaFlavor> = mapper.readValue(flavorsJson)
+
+        every { openstackService.listFlavors() } returns flavors
+
+        every { openstackService.getFlavorExtraSpecs(
+            "1195aefc-09fb-4bc7-b1f0-f21a304e864c")
+        } returns mutableMapOf("category" to "standard")
+        every { openstackService.getFlavorExtraSpecs(
+            "2295aefc-09fb-4bc7-b1f0-f21a304e864c")
+        } returns mutableMapOf("category" to "standard")
+        every { openstackService.getFlavorExtraSpecs(
+            "3395aefc-09fb-4bc7-b1f0-f21a304e864c")
+        } returns mutableMapOf("category" to "standard")
+        every { openstackService.getFlavorExtraSpecs(
+            "4495aefc-09fb-4bc7-b1f0-f21a304e864c")
+        } returns mutableMapOf("category" to "gpu")
 
         mockMvc.perform(
             get("/ucloud/testcenter/jobs/retrieveProducts")
                 //.header(HttpHeaders.AUTHORIZATION, authHeader)
         )
             .andExpect(status().isOk)
-            .andExpect(content().json(expectedProducts))
+            .andExpect(content().json(expectedProductOutput))
     }
 
     @Test
@@ -95,62 +139,8 @@ class HttpControllersTests(@Autowired val mockMvc: MockMvc) {
 
         //override fun onLocationMeasured(location: Location) { ... }
 
-        val stack = object : Stack {
-            override fun getId(): String {
-                TODO("Not yet implemented")
-            }
-
-            override fun getName(): String {
-                TODO("Not yet implemented")
-            }
-
-            override fun getStatus(): String {
-                TODO("Not yet implemented")
-            }
-
-            override fun getStackStatusReason(): String {
-                TODO("Not yet implemented")
-            }
-
-            override fun getDescription(): String {
-                TODO("Not yet implemented")
-            }
-
-            override fun getTemplateDescription(): String {
-                TODO("Not yet implemented")
-            }
-
-            override fun getTimeoutMins(): Long {
-                TODO("Not yet implemented")
-            }
-
-            override fun getOutputs(): MutableList<MutableMap<String, Any>> {
-                TODO("Not yet implemented")
-            }
-
-            override fun getParameters(): MutableMap<String, String> {
-                TODO("Not yet implemented")
-            }
-
-            override fun getCreationTime(): String {
-                TODO("Not yet implemented")
-            }
-
-            override fun getLinks(): MutableList<GenericLink> {
-                TODO("Not yet implemented")
-            }
-
-            override fun getUpdatedTime(): String {
-                TODO("Not yet implemented")
-            }
-
-            override fun getTags(): MutableList<String> {
-                TODO("Not yet implemented")
-            }
-        }
-
-        every { openStackService.createStacks(any())} returns Unit
-        every { openStackService.sendStatusWhenStackComplete(any())} returns Unit
+        every { openstackService.createStacks(any())} returns Unit
+        every { openstackService.sendStatusWhenStackComplete(any())} returns Unit
 
         val jobJSON = ClassPathResource("jobs.json").file.readText()
 
