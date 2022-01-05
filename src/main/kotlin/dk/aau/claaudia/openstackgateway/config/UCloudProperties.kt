@@ -1,6 +1,5 @@
 package dk.aau.claaudia.openstackgateway.config
 
-
 import dk.aau.claaudia.openstackgateway.interceptors.UcloudRequestInterceptor
 import dk.sdu.cloud.providers.UCloudAuthInterceptor
 import dk.sdu.cloud.providers.UCloudClient
@@ -37,8 +36,8 @@ class UCloudSpringConfigTest(
     @Primary
     override fun addInterceptors(registry: InterceptorRegistry) {
         // This is disabled for unittest profile. Find a way to test authentication without getting a token from ucloud
-        // Consider removing this line from provider package
-        registry.addInterceptor(interceptor).addPathPatterns("/ucloud/**")
+        // Consider removing this line from provider package and add it here
+        //registry.addInterceptor(interceptor).addPathPatterns("/ucloud/**")
 
         //Use this for debugging only. It destroys the request body
         //registry.addInterceptor(requestInterceptor)//.maybe patterns here?
