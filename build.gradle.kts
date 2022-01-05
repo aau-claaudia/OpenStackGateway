@@ -1,18 +1,17 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.dokka.gradle.DokkaTask
 
 val openstack4jVersion = "3.10"
-val jacksonVersion = "2.13.0"
-val kotlinVersion = "1.5.31"
+val jacksonVersion = "2.13.1"
+val kotlinVersion = "1.6.0"
 
 plugins {
-    id("org.springframework.boot") version "2.5.5"
+    id("org.springframework.boot") version "2.6.2"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
-    kotlin("jvm") version "1.5.31"
-    kotlin("plugin.spring") version "1.5.31"
-    kotlin("plugin.jpa") version "1.5.31"
-    kotlin("plugin.allopen") version "1.5.31"
-    kotlin("kapt") version "1.5.31"
+    kotlin("jvm") version "1.6.0"
+    kotlin("plugin.spring") version "1.6.0"
+    kotlin("plugin.jpa") version "1.6.0"
+    kotlin("plugin.allopen") version "1.6.0"
+    kotlin("kapt") version "1.6.0"
     id("org.liquibase.gradle") version "2.0.4"
     id("org.openapi.generator") version "5.0.0"
     id("org.jetbrains.dokka") version "1.5.30"
@@ -32,56 +31,34 @@ repositories {
     mavenLocal()
     mavenCentral()
     maven {
-        name = "UCloud Packages"
-        url = uri("https://maven.pkg.github.com/sdu-escience/ucloud")
-        credentials {
-            val helpText = """
-
-
-
-
-
-				Missing GitHub credentials. These are required to pull the packages required for this project. Please
-				create a personal access token here: https://github.com/settings/tokens. This access token require
-				the 'read:packages' scope.
-
-				With this information you will need to add the following lines to your Gradle properties
-				(~/.gradle/gradle.properties):
-
-				gpr.user=YOUR_GITHUB_USERNAME
-				gpr.token=YOUR_GITHUB_PERSONAL_ACCESS_TOKEN
-
-
-
-
-
-			""".trimIndent()
-            username = (project.findProperty("gpr.user") as? String?)
-                ?: System.getenv("PACKAGES_USERNAME") ?: error(helpText)
-            password = (project.findProperty("gpr.key") as? String?)
-                ?: System.getenv("PACKAGES_TOKEN") ?: error(helpText)
-        }
+        name = "UCloudMaven"
+        url = uri("https://mvn.cloud.sdu.dk/releases")
     }
 }
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-webflux:2.5.5")
-    implementation("org.springframework.cloud:spring-cloud-starter-config:3.0.5")
-    implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.0.4")
+    implementation("org.springframework.boot:spring-boot-starter-webflux:2.6.2")
+    implementation("org.springframework.cloud:spring-cloud-starter-config:3.1.0")
+    implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.1.0")
     implementation("com.auth0:java-jwt:3.18.2")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
-    implementation("org.springdoc:springdoc-openapi-ui:1.5.10")
+    implementation("org.springdoc:springdoc-openapi-ui:1.6.3")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.github.openstack4j.core:openstack4j-core:$openstack4jVersion")
     implementation("com.github.openstack4j.core.connectors:openstack4j-httpclient:$openstack4jVersion")
 
-    implementation("dk.sdu.cloud:jvm-provider-support-jvm:2021.2.0-storage0")
-    implementation("com.squareup.okhttp3:okhttp:4.9.1")
+    // SDU UCloud Provider Module
+    implementation("dk.sdu.cloud:jvm-provider-support:2021.3.0-alpha16")
+    implementation("io.ktor:ktor-client-core:1.6.2")
+    implementation("io.ktor:ktor-client-cio:1.6.2")
+    implementation("io.ktor:ktor-client-websockets:1.6.2")
+    implementation("io.ktor:ktor-client-okhttp:1.6.2")
+
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
 
-    implementation("org.liquibase:liquibase-core:4.2.2")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
@@ -93,7 +70,7 @@ dependencies {
     }
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-    testImplementation("com.ninja-squad:springmockk:3.0.1")
+    testImplementation("com.ninja-squad:springmockk:3.1.0")
 
     kapt("org.springframework.boot:spring-boot-configuration-processor")
 }

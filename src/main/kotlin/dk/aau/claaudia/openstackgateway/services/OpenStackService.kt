@@ -8,13 +8,17 @@ import dk.aau.claaudia.openstackgateway.extensions.getLogger
 import dk.aau.claaudia.openstackgateway.extensions.openstackName
 import dk.aau.claaudia.openstackgateway.extensions.ucloudId
 import dk.aau.claaudia.openstackgateway.models.StackStatus
+import dk.sdu.cloud.accounting.api.Product
+import dk.sdu.cloud.accounting.api.ProductPriceUnit
+import dk.sdu.cloud.accounting.api.providers.ResourceChargeCredits
+import dk.sdu.cloud.accounting.api.providers.ResourceRetrieveRequest
 import dk.sdu.cloud.app.orchestrator.api.*
 import dk.sdu.cloud.app.store.api.AppParameterValue
-import dk.sdu.cloud.app.store.api.SimpleDuration
+import dk.sdu.cloud.calls.BulkRequest
 import dk.sdu.cloud.calls.client.orThrow
+import dk.sdu.cloud.provider.api.ResourceUpdateAndId
 import dk.sdu.cloud.providers.UCloudClient
 import dk.sdu.cloud.providers.call
-import io.ktor.http.*
 import org.openstack4j.api.Builders
 import org.openstack4j.api.OSClient.OSClientV3
 import org.openstack4j.model.common.Identifier
@@ -333,6 +337,11 @@ class OpenStackService(
 
                         return@execute
                     }
+                    if (stack != null && stack.status == StackStatus.CREATE_FAILED.name) {
+                        logger.error("Stack create failed", job, stack)
+                        sendJobFailedMessage(job.id, "Job failed. Reason: ${stack.stackStatusReason}")
+                        return@execute
+                    }
                     // Sleep until next retry
                     logger.info("Waiting to retry")
                     Thread.sleep(config.monitor.delay)
@@ -374,12 +383,11 @@ class OpenStackService(
      */
     fun sendJobStatusMessage(jobId: String, state: JobState, message: String) {
         JobsControl.update.call(
-            JobsControlUpdateRequest(
+            BulkRequest(
                 listOf(
-                    JobsControlUpdateRequestItem(
+                    ResourceUpdateAndId(
                         jobId,
-                        state,
-                        message
+                        JobUpdate(state = state, status = message)
                     )
                 )
             ),
@@ -426,36 +434,67 @@ class OpenStackService(
      * @property stack the stack to charge
      */
     fun chargeStack(stack: Stack) {
-        val job = JobsControl.retrieve.call(JobsControlRetrieveRequest(stack.ucloudId), uCloudClient)
-        logger.info("Found job $job")
+        val job: Job = JobsControl.retrieve.call(
+            ResourceRetrieveRequest(
+                JobIncludeFlags(includeProduct = true),
+                stack.ucloudId
+            ),
+            uCloudClient
+        ).orThrow()
 
-        if (job.statusCode == HttpStatusCode.NotFound) {
-            logger.info("Job not found in ucloud. UcloudId: ${stack.ucloudId}")
-            return
-        }
+        logger.info("Found job $job")
 
         val chargeTime: Instant = Instant.now()
         val lastChargedTime: Instant = getLastChargedFromStack(stack)
 
         val duration = Duration.between(lastChargedTime, chargeTime)
-        val simpleDuration =
-            SimpleDuration(duration.toHours().toInt(), duration.toMinutesPart(), duration.toSecondsPart())
+
+        val product: Product.Compute? = job.status.resolvedProduct
+
+        if (product == null) {
+            logger.error("Could not charge job. Job had not resolved product. UcloudId: ${stack.ucloudId}")
+            return
+        }
+
+        val cpuCores: Int? = product.cpu
+
+        if (cpuCores == null) {
+            logger.error("Could not charge job. Product had no cpu count. UcloudId: ${stack.ucloudId}")
+            return
+        }
+
+        //        Units is the number of cores cores
+        //        Period is the time spent.
+        //        - This is counted in minutes/hours or days depending on the products unitOfPrice
+
+        var period: Long = 0
+        if (product.unitOfPrice == ProductPriceUnit.CREDITS_PER_HOUR) {
+            period = duration.toHours()
+            if (period == 0L) {
+                logger.error("It makes no sense to charge zero hours. UcloudId: ${stack.ucloudId}")
+                return
+            }
+        } else if (product.unitOfPrice == ProductPriceUnit.CREDITS_PER_MINUTE) {
+            period = duration.toMinutes()
+        }
 
         val response = JobsControl.chargeCredits.call(
-            JobsControlChargeCreditsRequest(
+            BulkRequest(
                 listOf(
-                    JobsControlChargeCreditsRequestItem(
-                        // Er chargedate okay som chargeId
-                        stack.ucloudId, lastChargedTime.toString(), simpleDuration
+                    ResourceChargeCredits(
+                        stack.ucloudId,
+                        lastChargedTime.toString(), // Er chargedate okay som chargeId
+                        cpuCores.toLong(),
+                        period
                     )
                 )
             ),
             uCloudClient
         ).orThrow()
 
-        if (response.duplicateCharges.isEmpty() && response.duplicateCharges.isEmpty()) {
+        if (response.duplicateCharges.isEmpty() && response.insufficientFunds.isEmpty()) {
             // Everything is good
-            logger.info("Stack ${stack}. ucloud job was charged for $simpleDuration. $response")
+            logger.info("Stack ${stack}. ucloud job was charged for $cpuCores cores for period $period. $response")
             updateStackLastCharged(stack, chargeTime)
         } else if (response.insufficientFunds.isNotEmpty()) {
             // Insufficient funds
@@ -595,7 +634,10 @@ class OpenStackService(
                     Thread.sleep(config.monitor.delay)
                 }
                 // Job could not be deleted
-                sendJobFailedMessage(job.id, "Could not delete job. Timeout exceeded")
+                logger.error("Job could no be deleted", job)
+                // Dont think we should send a status update here because the user should
+                // be able to retry the delete
+                //sendJobFailedMessage(job.id, "Could not delete job. Timeout exceeded")
                 return@execute
             }
         }
@@ -638,10 +680,10 @@ class OpenStackService(
                 logger.info("Unhandled status: ${stack.status}", job, stack)
                 sendJobStatusMessage(
                     job.id, JobState.RUNNING,
-                    "ERROR, Unknown status: ${job.currentState.name}"
+                    "ERROR, Unknown status: ${job.status.state.name}"
                 )
             }
-            job.currentState != expectedJobState -> {
+            job.status.state != expectedJobState -> {
                 // Status in ucloud is not as expected. Send update.
                 logger.info("Job status not as expected, updating ucloud: ${stack.status}", job, stack)
                 sendJobStatusMessage(job.id, expectedJobState, "Stack status: ${stack.status}")

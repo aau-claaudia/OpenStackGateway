@@ -1,24 +1,22 @@
 package dk.aau.claaudia.openstackgateway.controllers
 
-
 import dk.aau.claaudia.openstackgateway.config.ProviderProperties
 import dk.aau.claaudia.openstackgateway.config.UCloudProperties
 import dk.aau.claaudia.openstackgateway.services.OpenStackService
 import dk.sdu.cloud.CommonErrorMessage
+import dk.sdu.cloud.FindByStringId
 import dk.sdu.cloud.accounting.api.ProductReference
 import dk.sdu.cloud.app.orchestrator.api.*
 import dk.sdu.cloud.calls.BulkRequest
-import dk.sdu.cloud.calls.bulkRequestOf
-import dk.sdu.cloud.calls.client.orThrow
-import dk.sdu.cloud.providers.*
+import dk.sdu.cloud.calls.BulkResponse
+import dk.sdu.cloud.provider.api.UpdatedAclWithResource
+import dk.sdu.cloud.providers.JobsController
+import dk.sdu.cloud.providers.UCloudClient
+import dk.sdu.cloud.providers.UCloudWsContext
+import dk.sdu.cloud.providers.UCloudWsDispatcher
 import dk.sdu.cloud.service.Loggable
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
-import org.springframework.web.bind.annotation.*
-
-import java.util.*
-import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.collections.HashMap
+import org.springframework.web.bind.annotation.RestController
 
 /**
  * This class implements Uclouds JobController from the provider integration package
@@ -42,97 +40,33 @@ class SimpleCompute(
      * Then start a task that monitors the stacks in openstack.
      * When they start or report an error this message and status should be sent to ucloud.
      */
-    override fun create(request: BulkRequest<Job>) {
+    override fun create(request: BulkRequest<Job>): BulkResponse<FindByStringId> {
         log.info("Creating stacks: $request")
         openstackService.createStacks(request.items)
 
         log.info("Waiting for stacks to start: $request")
         openstackService.sendStatusWhenStackComplete(request.items)
-    }
 
-    /**
-     * Delete specific stacks in openstack.
-     * It is important to make sure the ucloud jobs are charged before beeing deleted.
-     * The function chargeDeleteJobs will first send a charge request to ucloud
-     * and the start the deletion process.
-     * When an async task has been started for each job,
-     * then start a task that monitors the stacks in openstack.
-     * When they can no longer be found we assume deletion and status should be sent to ucloud.
-     */
-    override fun delete(request: BulkRequest<Job>) {
-        log.info("Charging and deleting jobs: $request")
-        openstackService.chargeDeleteJobs(request.items)
-
-        log.info("Waiting for stacks to be deleted: $request")
-        openstackService.monitorStackDeletions(request.items)
+        // FIXME What ids to return here?
+        return BulkResponse(listOf())
     }
 
     /**
      * This currently has no use for Virtual Machines and does nothing.
      */
-    override fun extend(request: BulkRequest<JobsProviderExtendRequestItem>) {
-        log.info("Extending some jobs: $request")
-        // TODO What does extend mean for a VM?
-        JobsControl.update.call(
-            bulkRequestOf(request.items.map { requestItem ->
-                JobsControlUpdateRequestItem(
-                    requestItem.job.id,
-                    status = "We have extended your requestItem with ${requestItem.requestedTime}"
-                )
-            }),
-            client
-        ).orThrow()
-
+    override fun extend(request: BulkRequest<JobsProviderExtendRequestItem>): BulkResponse<Unit> {
+        TODO("Not yet implemented")
     }
-
-    private val threadPool = Executors.newCachedThreadPool()
-    private val tasks = HashMap<String, AtomicBoolean>()
 
     override fun follow(
         request: JobsProviderFollowRequest,
-        wsContext: UCloudWsContext<JobsProviderFollowRequest, JobsProviderFollowResponse, CommonErrorMessage>,
+        wsContext: UCloudWsContext<JobsProviderFollowRequest, JobsProviderFollowResponse, CommonErrorMessage>
     ) {
-        when (request) {
-            is JobsProviderFollowRequest.Init -> {
-                val isRunning = AtomicBoolean(true)
-                val streamId = UUID.randomUUID().toString()
-                synchronized(tasks) {
-                    tasks[streamId] = isRunning
-                }
-
-                threadPool.execute {
-                    wsContext.sendMessage(JobsProviderFollowResponse(streamId, -1))
-
-                    var counter = 0
-                    while (isRunning.get() && wsContext.session.isOpen) {
-                        wsContext.sendMessage(JobsProviderFollowResponse(streamId, 0, "Hello, World! $counter\n"))
-                        counter++
-                        Thread.sleep(1000)
-                    }
-
-                    wsContext.sendResponse(JobsProviderFollowResponse("", -1), 200)
-                }
-            }
-            is JobsProviderFollowRequest.CancelStream -> {
-                synchronized(tasks) {
-                    tasks.remove(request.streamId)?.set(false)
-                    wsContext.sendResponse(JobsProviderFollowResponse("", -1), 200)
-                }
-            }
-        }
+        TODO("Not yet implemented")
     }
 
-    override fun openInteractiveSession(
-        request: BulkRequest<JobsProviderOpenInteractiveSessionRequestItem>,
-    ): JobsProviderOpenInteractiveSessionResponse {
-        log.info("open interactive session", request)
-        val sessions: MutableList<OpenSession> = mutableListOf()
-        // Use map here
-        for (item in request.items) {
-            sessions.add(OpenSession.Web(item.job.id, 4, "a"))
-        }
-        return JobsProviderOpenInteractiveSessionResponse(sessions)
-        //TODO()
+    override fun openInteractiveSession(request: BulkRequest<JobsProviderOpenInteractiveSessionRequestItem>): BulkResponse<OpenSession> {
+        TODO("Not yet implemented")
     }
 
     /**
@@ -142,37 +76,37 @@ class SimpleCompute(
      * For now there is only a single product category but that can be expanded and maybe saved as tags on flavors
      * All information about ComputeSupport is also hardcoded for now
      */
-    override fun retrieveProducts(request: Unit): JobsProviderRetrieveProductsResponse {
+    override fun retrieveProducts(request: Unit): BulkResponse<ComputeSupport> {
         log.info("Retrieving products")
 
-        val response = JobsProviderRetrieveProductsResponse(
+        val response = BulkResponse(
             openstackService.listFlavors().filterNotNull().map { flavor ->
-                ComputeProductSupport(
+                ComputeSupport(
                     ProductReference(
                         flavor.name,
                         openstackService.getFlavorExtraSpecs(flavor.id).getOrDefault(
-                            "category", providerProperties.defaultProductCategory),
-                        providerProperties.id),
-                    ComputeSupport(
-                        ComputeSupport.Docker(
-                            enabled = false,
-                            web = false,
-                            vnc = false,
-                            logs = false,
-                            terminal = false,
-                            peers = false,
-                            timeExtension = false,
-                            utilization = false
+                            "category", providerProperties.defaultProductCategory
                         ),
-                        ComputeSupport.VirtualMachine(
-                            enabled = true,
-                            logs = false,
-                            vnc = false,
-                            terminal = false,
-                            suspension = false,
-                            timeExtension = false,
-                            utilization = false
-                        )
+                        providerProperties.id
+                    ),
+                    ComputeSupport.Docker(
+                        enabled = false,
+                        web = false,
+                        vnc = false,
+                        logs = false,
+                        terminal = false,
+                        peers = false,
+                        timeExtension = false,
+                        utilization = false
+                    ),
+                    ComputeSupport.VirtualMachine(
+                        enabled = true,
+                        logs = false,
+                        vnc = false,
+                        terminal = false,
+                        suspension = false,
+                        timeExtension = false,
+                        utilization = false
                     )
                 )
             }
@@ -185,9 +119,8 @@ class SimpleCompute(
     /**
      * Unused for now
      */
-    override fun retrieveUtilization(request: Unit): JobsProviderUtilizationResponse {
-        log.info("Retrieving utilization")
-        return JobsProviderUtilizationResponse(CpuAndMemory(0.0, 0L), CpuAndMemory(0.0, 0L), QueueStatus(0, 0))
+    override fun retrieveUtilization(request: Unit): JobsRetrieveUtilizationResponse {
+        TODO("Not yet implemented")
     }
 
     /**
@@ -195,7 +128,31 @@ class SimpleCompute(
      * Ucloud plans to implement this and we need to decide how to suspend stacks in openstack
      */
     override fun suspend(request: BulkRequest<Job>) {
-        log.info("suspend jobs: $request")
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Delete specific stacks in openstack.
+     * It is important to make sure the ucloud jobs are charged before beeing deleted.
+     * The function chargeDeleteJobs will first send a charge request to ucloud
+     * and the start the deletion process.
+     * When an async task has been started for each job,
+     * then start a task that monitors the stacks in openstack.
+     * When they can no longer be found we assume deletion and status should be sent to ucloud.
+     */
+    override fun terminate(request: BulkRequest<Job>): BulkResponse<Unit> {
+        log.info("Charging and deleting jobs: $request")
+        openstackService.chargeDeleteJobs(request.items)
+
+        log.info("Waiting for stacks to be deleted: $request")
+        openstackService.monitorStackDeletions(request.items)
+
+        //FIXME Okay to return empty list here?
+        return BulkResponse(listOf())
+    }
+
+    override fun updateAcl(request: BulkRequest<UpdatedAclWithResource<Job>>): BulkResponse<Unit> {
+        TODO("Not yet implemented")
     }
 
     /**

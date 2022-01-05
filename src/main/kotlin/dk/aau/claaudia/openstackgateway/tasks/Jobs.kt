@@ -17,9 +17,20 @@ class Jobs(private val openStackService: OpenStackService) {
      * This task is started every 15 minutes.
      */
     @Scheduled(cron = "0 0,15,30,45 * * * *")
-    fun cronScheduledTask() {
+    fun chargeAllStacks() {
         logger.info("Charge task is running")
         openStackService.chargeAllStacks()
+    }
+
+    /**
+     * TO BE IMPLEMENTED
+     * Should remove failed stack creations
+     * This task is started every hour.
+     */
+    @Scheduled(cron = "0 0 * * * *")
+    fun cleanUpFailedStacks() {
+        // TODO Implement this
+        logger.info("Cleanup task is running")
     }
 
     companion object {
