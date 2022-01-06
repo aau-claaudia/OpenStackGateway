@@ -1,6 +1,5 @@
 package dk.aau.claaudia.openstackgateway.config
 
-
 import dk.aau.claaudia.openstackgateway.interceptors.UcloudRequestInterceptor
 import dk.sdu.cloud.providers.UCloudAuthInterceptor
 import dk.sdu.cloud.providers.UCloudClient
@@ -14,17 +13,18 @@ import org.springframework.web.filter.CommonsRequestLoggingFilter
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
-
+/**
+ * This is used by the provider library
+ */
 @ConstructorBinding
 @ConfigurationProperties("ucloud")
 data class UCloudProperties(
     val certificate: String,
-    val providerId: String,
     val refreshToken: String,
     val host: String,
     val tls: Boolean,
     val port: Int
-)
+    )
 
 //This adds an additional interceptor but cannot remove the one from the providerlibrary
 @Configuration
@@ -36,8 +36,8 @@ class UCloudSpringConfigTest(
     @Primary
     override fun addInterceptors(registry: InterceptorRegistry) {
         // This is disabled for unittest profile. Find a way to test authentication without getting a token from ucloud
-        // Consider removing this line from provider package
-        registry.addInterceptor(interceptor).addPathPatterns("/ucloud/**")
+        // Consider removing this line from provider package and add it here
+        //registry.addInterceptor(interceptor).addPathPatterns("/ucloud/**")
 
         //Use this for debugging only. It destroys the request body
         //registry.addInterceptor(requestInterceptor)//.maybe patterns here?

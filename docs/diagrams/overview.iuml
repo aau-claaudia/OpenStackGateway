@@ -1,4 +1,5 @@
 @startuml
+!theme cerulean-outline
 title System overview
 actor user
 folder SDU {
