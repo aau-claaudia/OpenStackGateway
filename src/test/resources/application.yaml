@@ -24,31 +24,9 @@ ucloud:
   port: 8080
   refresh-token: isIjaheLaRvMtLvOfbPRaSh+9M7Ezk/3AXR6lgqNaL+bAV+KG/Ih9p3lax1+rswKvTOICi5DsumEu2RopW8qdA==
 
-
 provider:
   id: testcenter
-  products:
-    - id: small 8GB
-      category: standard
-      support:
-        docker:
-          enabled: false
-        virtual-machine:
-          enabled: true
-    - id: medium 16GB
-      category: standard
-      support:
-        docker:
-          enabled: false
-        virtual-machine:
-          enabled: true
-    - id: large 32GB
-      category: standard
-      support:
-        docker:
-          enabled: false
-        virtual-machine:
-          enabled: true
+  default-product-category: standard
   images:
     - openstackId: f94ae063-dba2-42be-8435-6f031583fe1f
       openstackName: Ubuntu 20.04 LTS

@@ -9,22 +9,22 @@
       "support": {
         "docker": {
           "enabled": false,
-          "logs": null,
-          "web": null,
-          "vnc": null,
-          "terminal": null,
-          "peers": null,
-          "timeExtension": null,
-          "utilization": null
+          "logs": false,
+          "web": false,
+          "vnc": false,
+          "terminal": false,
+          "peers": false,
+          "timeExtension": false,
+          "utilization": false
         },
         "virtualMachine": {
           "enabled": true,
-          "logs": null,
-          "vnc": null,
-          "terminal": null,
-          "timeExtension": null,
-          "suspension": null,
-          "utilization": null
+          "logs": false,
+          "vnc": false,
+          "terminal": false,
+          "timeExtension": false,
+          "suspension": false,
+          "utilization": false
         }
       }
     },
@@ -37,22 +37,22 @@
       "support": {
         "docker": {
           "enabled": false,
-          "logs": null,
-          "web": null,
-          "vnc": null,
-          "terminal": null,
-          "peers": null,
-          "timeExtension": null,
-          "utilization": null
+          "logs": false,
+          "web": false,
+          "vnc": false,
+          "terminal": false,
+          "peers": false,
+          "timeExtension": false,
+          "utilization": false
         },
         "virtualMachine": {
           "enabled": true,
-          "logs": null,
-          "vnc": null,
-          "terminal": null,
-          "timeExtension": null,
-          "suspension": null,
-          "utilization": null
+          "logs": false,
+          "vnc": false,
+          "terminal": false,
+          "timeExtension": false,
+          "suspension": false,
+          "utilization": false
         }
       }
     },
@@ -65,22 +65,50 @@
       "support": {
         "docker": {
           "enabled": false,
-          "logs": null,
-          "web": null,
-          "vnc": null,
-          "terminal": null,
-          "peers": null,
-          "timeExtension": null,
-          "utilization": null
+          "logs": false,
+          "web": false,
+          "vnc": false,
+          "terminal": false,
+          "peers": false,
+          "timeExtension": false,
+          "utilization": false
         },
         "virtualMachine": {
           "enabled": true,
-          "logs": null,
-          "vnc": null,
-          "terminal": null,
-          "timeExtension": null,
-          "suspension": null,
-          "utilization": null
+          "logs": false,
+          "vnc": false,
+          "terminal": false,
+          "timeExtension": false,
+          "suspension": false,
+          "utilization": false
+        }
+      }
+    },
+    {
+      "product": {
+        "id": "uc-t4-1",
+        "category": "gpu",
+        "provider": "testcenter"
+      },
+      "support": {
+        "docker": {
+          "enabled": false,
+          "logs": false,
+          "web": false,
+          "vnc": false,
+          "terminal": false,
+          "peers": false,
+          "timeExtension": false,
+          "utilization": false
+        },
+        "virtualMachine": {
+          "enabled": true,
+          "logs": false,
+          "vnc": false,
+          "terminal": false,
+          "timeExtension": false,
+          "suspension": false,
+          "utilization": false
         }
       }
     }
