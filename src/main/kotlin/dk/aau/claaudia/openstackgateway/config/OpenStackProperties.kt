@@ -14,7 +14,6 @@ data class OpenStackProperties(
     val network: String,
     val securityGroup: String,
     val keyName: String,
-    val availabilityZone: String,
     val monitor: Monitor
     ) {
     data class Endpoints(val auth: String)
