@@ -73,7 +73,7 @@ class SimpleCompute(
      * Provide ucloud with the available products.
      * These are basically equivalent to openstack flavors but need to adhere to the ucloud format
      * This includes information additional information, e.g., product is Virtual Machine
-     * For now there is only a single product category but that can be expanded and maybe saved as tags on flavors
+     * The UCloud category is translated to availability_zone on the flavor in openstack.
      * All information about ComputeSupport is also hardcoded for now
      */
     override fun retrieveProducts(request: Unit): BulkResponse<ComputeSupport> {
@@ -85,7 +85,7 @@ class SimpleCompute(
                     ProductReference(
                         flavor.name,
                         openstackService.getFlavorExtraSpecs(flavor.id).getOrDefault(
-                            "category", providerProperties.defaultProductCategory
+                            "availability_zone", providerProperties.defaultProductCategory
                         ),
                         providerProperties.id
                     ),
