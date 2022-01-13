@@ -191,7 +191,6 @@ class OpenStackService(
         parameters["network"] = config.network
         parameters["security_group"] = config.securityGroup
         parameters["key_name"] = config.keyName
-        parameters["az"] = config.availabilityZone
 
         return parameters
     }
@@ -591,8 +590,11 @@ class OpenStackService(
         threadPool.execute {
             val client = getClient()
             val stack = client.heat().stacks().getStackByName(job.openstackName)
-            chargeStack(stack)
-            deleteJob(job)
+            if (stack != null) {
+                logger.error("AsyncChargeDeleteJob could not delete. Job: ${job.id} Stack: ${job.openstackName}")
+                chargeStack(stack)
+                deleteJob(job)
+            }
             return@execute
         }
     }

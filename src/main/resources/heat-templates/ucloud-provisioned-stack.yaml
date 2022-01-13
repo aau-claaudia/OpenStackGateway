@@ -4,10 +4,6 @@ description:
   uCloud provisioned stack
 
 parameters:
-  az:
-    type: string
-    description: availability zone
-    default: uCloud
   flavor:
     type: string
     description: Flavor for the server to be created
@@ -44,7 +40,6 @@ resources:
       flavor: { get_param: flavor }
       networks: [{network: {get_param: network} }]
       security_groups: [ get_param: security_group ]
-      availability_zone: { get_param : az }
       user_data: { get_resource: cloud-init-config }
       user_data_format: RAW
       key_name: { get_param: key_name }
