@@ -670,6 +670,7 @@ class OpenStackService(
         // Move this to config?
         val statusMappings = mapOf<StackStatus, JobState>(
             StackStatus.CREATE_COMPLETE to JobState.RUNNING,
+            StackStatus.UPDATE_COMPLETE to JobState.RUNNING,
             StackStatus.CREATE_IN_PROGRESS to JobState.IN_QUEUE,
             StackStatus.CREATE_FAILED to JobState.FAILURE
         )
