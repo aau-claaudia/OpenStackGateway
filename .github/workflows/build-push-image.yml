@@ -84,6 +84,7 @@ jobs:
             sudo -E docker stack deploy --prune -c ${{ env.SERVICE_DIRECTORY }}/service/stack.yml osg
   prod:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' # run this job only for the main branch
     needs: app
     environment:
       name: prod
