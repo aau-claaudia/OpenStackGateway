@@ -5,16 +5,21 @@ import dk.aau.claaudia.openstackgateway.config.Messages
 import dk.aau.claaudia.openstackgateway.config.OpenStackProperties
 import dk.aau.claaudia.openstackgateway.config.ProviderProperties
 import dk.aau.claaudia.openstackgateway.extensions.getLogger
+import dk.aau.claaudia.openstackgateway.extensions.oldOpenstackName
 import dk.aau.claaudia.openstackgateway.extensions.openstackName
 import dk.aau.claaudia.openstackgateway.extensions.ucloudId
 import dk.aau.claaudia.openstackgateway.models.StackStatus
+import dk.sdu.cloud.CommonErrorMessage
+import dk.sdu.cloud.PageV2
 import dk.sdu.cloud.accounting.api.Product
 import dk.sdu.cloud.accounting.api.ProductPriceUnit
+import dk.sdu.cloud.accounting.api.providers.ResourceBrowseRequest
 import dk.sdu.cloud.accounting.api.providers.ResourceChargeCredits
 import dk.sdu.cloud.accounting.api.providers.ResourceRetrieveRequest
 import dk.sdu.cloud.app.orchestrator.api.*
 import dk.sdu.cloud.app.store.api.AppParameterValue
 import dk.sdu.cloud.calls.BulkRequest
+import dk.sdu.cloud.calls.client.IngoingCallResponse
 import dk.sdu.cloud.calls.client.orThrow
 import dk.sdu.cloud.provider.api.ResourceUpdateAndId
 import dk.sdu.cloud.providers.UCloudClient
@@ -24,6 +29,7 @@ import org.openstack4j.api.OSClient.OSClientV3
 import org.openstack4j.model.common.Identifier
 import org.openstack4j.model.compute.Flavor
 import org.openstack4j.model.compute.Server
+import org.openstack4j.model.compute.VNCConsole
 import org.openstack4j.model.heat.Event
 import org.openstack4j.model.heat.Stack
 import org.openstack4j.model.heat.Template
@@ -132,8 +138,20 @@ class OpenStackService(
         return flavor
     }
 
-    fun getStackByName(name: String): Stack? {
-        return getClient().heat().stacks().getStackByName(name)
+    fun getStackByJob(job: Job): Stack? {
+        val client = getClient()
+        // UCloud have changed the JobIds from UUIDs to integers.
+        // The old Id should still be on the job and is used to retrieve the stack
+        val newIdStack = client.heat().stacks().getStackByName(job.openstackName)
+        if (newIdStack == null) {
+            logger.info("Could not find stack from id: ${job.openstackName}. Try old id ${job.providerGeneratedId} ${job.oldOpenstackName}")
+            val oldIdStack = client.heat().stacks().getStackByName(job.oldOpenstackName)
+            if (oldIdStack != null) {
+                logger.info("Found: ${oldIdStack.name}")
+                return oldIdStack
+            }
+        }
+        return newIdStack
     }
 
     /**
@@ -322,7 +340,7 @@ class OpenStackService(
             threadPool.execute {
                 val startTime = System.currentTimeMillis()
                 while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
-                    val stack = getStackByName(job.openstackName)
+                    val stack = getStackByJob(job)
                     logger.info("Monitoring stack status", stack, stack?.status)
                     if (stack != null && stack.status == StackStatus.CREATE_COMPLETE.name) {
                         logger.info("Stack CREATE complete")
@@ -400,7 +418,12 @@ class OpenStackService(
     fun chargeAllStacks() {
         val client = getClient()
 
-        val activeStacks = client.heat().stacks().list().filter { it.status in listOf("CREATE_COMPLETE", "UPDATE_COMPLETE") }
+        val activeStacks = client.heat().stacks().list().filter {
+            it.status in listOf(
+                StackStatus.CREATE_COMPLETE.name,
+                StackStatus.UPDATE_COMPLETE.name
+            )
+        }
         logger.info("list: ${activeStacks.size}")
 
         activeStacks.forEach {
@@ -433,13 +456,37 @@ class OpenStackService(
      * @property stack the stack to charge
      */
     fun chargeStack(stack: Stack) {
-        val job: Job = JobsControl.retrieve.call(
+        val job: Job?
+        // Try to find the UCloud job using the stack name
+        val jobRetrieve: IngoingCallResponse<Job, CommonErrorMessage> = JobsControl.retrieve.call(
             ResourceRetrieveRequest(
                 JobIncludeFlags(includeProduct = true),
                 stack.ucloudId
             ),
             uCloudClient
-        ).orThrow()
+        )
+
+        if (jobRetrieve is IngoingCallResponse.Ok) {
+            job = jobRetrieve.result
+        } else {
+            logger.info("Couldn't find ucloud job by id. Trying old providerId. UcloudId: ${stack.ucloudId}")
+            val jobs: PageV2<Job> = JobsControl.browse.call(
+                ResourceBrowseRequest(
+                    JobIncludeFlags(
+                        filterProviderIds = stack.ucloudId,
+                        includeProduct = true
+                    )
+                ),
+                uCloudClient
+            ).orThrow()
+            if (jobs.items.size == 1) {
+                job = jobs.items.first()
+                logger.info("Found job in UCloud from old providerId. UcloudId: ${stack.ucloudId}: $job")
+            } else {
+                throw Exception("Could not charge job. Could not find job in UCloud: ${stack.ucloudId}")
+            }
+        }
+
 
         logger.info("Found job $job")
 
@@ -475,6 +522,10 @@ class OpenStackService(
             }
         } else if (product.unitOfPrice == ProductPriceUnit.CREDITS_PER_MINUTE) {
             period = duration.toMinutes()
+            if (period == 0L) {
+                logger.error("It makes no sense to charge zero minutes. UcloudId: ${stack.ucloudId}")
+                return
+            }
         }
 
         val response = JobsControl.chargeCredits.call(
@@ -545,13 +596,13 @@ class OpenStackService(
         //Start by getting the stack with all details.
         //When stack is retrieved from list it doesn't have parameters
 
-        val stack = getStackByName(listStack.name)
+        val client = getClient()
+        val stack = client.heat().stacks().getStackByName(listStack.name)
         if (stack == null) {
             logger.error("Could not update lastcharged. Stack not found: $listStack.name")
             return
         }
 
-        val client = getClient()
         val templateAsMap = client.heat().templates().getTemplateAsMap(stack.name)
         val jsonStr = jacksonObjectMapper().writeValueAsString(templateAsMap)
 
@@ -588,8 +639,7 @@ class OpenStackService(
 
     fun asyncChargeDeleteJob(job: Job) {
         threadPool.execute {
-            val client = getClient()
-            val stack = client.heat().stacks().getStackByName(job.openstackName)
+            val stack = getStackByJob(job)
             if (stack != null) {
                 logger.error("AsyncChargeDeleteJob could not delete. Job: ${job.id} Stack: ${job.openstackName}")
                 chargeStack(stack)
@@ -602,7 +652,7 @@ class OpenStackService(
     fun deleteJob(job: Job) {
         val client = getClient()
 
-        val stackByName = client.heat().stacks().getStackByName(job.openstackName)
+        val stackByName = getStackByJob(job)
         if (stackByName != null) {
             logger.info("Deleting stack: ${stackByName.name}")
             val delete = client.heat().stacks().delete(stackByName.name, stackByName.id)
@@ -623,9 +673,9 @@ class OpenStackService(
             threadPool.execute {
                 val startTime = System.currentTimeMillis()
                 while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
-                    val stack = getStackByName(job.openstackName)
+                    val stack = getStackByJob(job)
                     if (stack == null) {
-                        logger.info("Could not find stack. Assume deleted", stack)
+                        logger.info("Could not find stack. Assume deleted", job.id)
                         sendJobStatusMessage(job.id, JobState.SUCCESS, "Stack DELETE complete")
                         return@execute
 
@@ -659,7 +709,7 @@ class OpenStackService(
      * If the stack status is different than the expected send an status update to ucloud.
      */
     fun verifyJob(job: Job) {
-        val stack = getStackByName(job.openstackName)
+        val stack = getStackByJob(job)
 
         if (stack == null) {
             logger.info("Could not find stack. Assume deleted", job, stack)
