@@ -10,8 +10,7 @@ import org.springframework.web.servlet.view.RedirectView
  * This controller contains an endpoint to redirect from the base url to the swagger ui
  */
 @RestController
-class HomeController(
-) {
+class HomeController {
 
     /**
      * Redirect to swagger interface
