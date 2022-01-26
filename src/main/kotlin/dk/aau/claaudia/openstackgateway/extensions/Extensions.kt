@@ -34,6 +34,7 @@ private lateinit var c: ExtensionConfig
 val Stack.ucloudId: String
     get() = this.name.removePrefix(c.config.stackPrefix)
 
+
 /**
  * Given a ucloud job, add prefix to id to get openstack name
  */
@@ -41,3 +42,8 @@ val Job.openstackName: String
     get() = "${c.config.stackPrefix}${this.id}"
 
 
+/**
+ * Given a ucloud job, add prefix to id to get OLD openstack name that uses UUIDS
+ */
+val Job.oldOpenstackName: String
+    get() = "${c.config.stackPrefix}${this.providerGeneratedId}"
