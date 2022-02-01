@@ -532,7 +532,7 @@ class OpenStackService(
             BulkRequest(
                 listOf(
                     ResourceChargeCredits(
-                        stack.ucloudId,
+                        job.id,
                         lastChargedTime.toString(), // Er chargedate okay som chargeId
                         cpuCores.toLong(),
                         period
@@ -745,7 +745,24 @@ class OpenStackService(
                 logger.info("Status verified: ${stack.status}", job, stack)
             }
         }
+    }
 
+    fun removeFailedJobs() {
+        //TODO Finish implementing this
+        // For now, log failed jobs
+        val client = getClient()
+
+        val failedStacks = client.heat().stacks().list().filter {
+            it.status in listOf(
+                StackStatus.CREATE_FAILED.name,
+                StackStatus.RESUME_FAILED.name,
+                StackStatus.DELETE_FAILED.name
+            )
+        }
+        logger.info("Found ${failedStacks.size} that should be deleted")
+        for (failedStack in failedStacks) {
+            logger.info("Stack: ${failedStack.id} - ${failedStack.stackStatusReason}")
+        }
     }
 
     fun listVolumes(): List<Volume> {
@@ -779,6 +796,12 @@ class OpenStackService(
         val volumeAttachment: VolumeAttachment = volume.attachments.find { it.serverId == instance.id }
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Volume not found")
         getClient().compute().servers().detachVolume(instance.id, volumeAttachment.attachmentId)
+    }
+
+    fun getConsole(serverId: String): VNCConsole? {
+        val client = getClient()
+
+        return client.compute().servers().getVNCConsole(serverId, VNCConsole.Type.NOVNC)
     }
 
     companion object {
