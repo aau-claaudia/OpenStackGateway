@@ -29,8 +29,8 @@ class Jobs(private val openStackService: OpenStackService) {
      */
     @Scheduled(cron = "0 0 * * * *")
     fun cleanUpFailedStacks() {
-        // TODO Implement this
         logger.info("Cleanup task is running")
+        openStackService.removeFailedJobs()
     }
 
     companion object {
