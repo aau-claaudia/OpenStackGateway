@@ -50,7 +50,7 @@ dependencies {
     implementation("com.github.openstack4j.core.connectors:openstack4j-httpclient:$openstack4jVersion")
 
     // SDU UCloud Provider Module
-    implementation("dk.sdu.cloud:jvm-provider-support:2021.3.0-alpha16")
+    implementation("dk.sdu.cloud:jvm-provider-support:2022.1.4")
     implementation("io.ktor:ktor-client-core:1.6.2")
     implementation("io.ktor:ktor-client-cio:1.6.2")
     implementation("io.ktor:ktor-client-websockets:1.6.2")
