@@ -53,7 +53,7 @@ dependencies {
     implementation("dk.sdu.cloud:jvm-provider-support:2021.3.0-alpha16")
     implementation("io.ktor:ktor-client-core:1.6.2")
     implementation("io.ktor:ktor-client-cio:1.6.2")
-    implementation("io.ktor:ktor-client-websockets:1.6.2")
+    implementation("io.ktor:ktor-client-websockets:1.6.7")
     implementation("io.ktor:ktor-client-okhttp:1.6.2")
 
     implementation("com.squareup.okhttp3:okhttp:4.9.3")
