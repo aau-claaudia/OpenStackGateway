@@ -11,7 +11,7 @@ plugins {
     kotlin("plugin.spring") version "1.6.0"
     kotlin("plugin.jpa") version "1.6.0"
     kotlin("plugin.allopen") version "1.6.0"
-    kotlin("kapt") version "1.6.0"
+    kotlin("kapt") version "1.6.10"
     id("org.liquibase.gradle") version "2.0.4"
     id("org.openapi.generator") version "5.0.0"
     id("org.jetbrains.dokka") version "1.5.30"
