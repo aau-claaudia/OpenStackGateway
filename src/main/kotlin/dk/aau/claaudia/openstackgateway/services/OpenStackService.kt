@@ -715,8 +715,8 @@ class OpenStackService(
         val stack = getStackByJob(job)
 
         if (stack == null) {
-            logger.info("Could not find stack. Assume deleted", job, stack)
-            sendJobStatusMessage(job.id, JobState.SUCCESS, "Stack was deleted")
+            logger.info("Could not find stack. Assume nothing", job, stack)
+            //sendJobStatusMessage(job.id, JobState.SUCCESS, "Stack was deleted")
             return
         }
 
