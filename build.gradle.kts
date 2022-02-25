@@ -7,7 +7,7 @@ val kotlinVersion = "1.6.10"
 plugins {
     id("org.springframework.boot") version "2.6.2"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
-    kotlin("jvm") version "1.6.0"
+    kotlin("jvm") version "1.6.10"
     kotlin("plugin.spring") version "1.6.10"
     kotlin("plugin.jpa") version "1.6.10"
     kotlin("plugin.allopen") version "1.6.10"
@@ -48,7 +48,6 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.github.openstack4j.core:openstack4j-core:$openstack4jVersion")
     implementation("com.github.openstack4j.core.connectors:openstack4j-httpclient:$openstack4jVersion")
-    implementation("org.springframework.boot:spring-boot-starter-security")
 
     // SDU UCloud Provider Module
     implementation("dk.sdu.cloud:jvm-provider-support:2022.1.4")
