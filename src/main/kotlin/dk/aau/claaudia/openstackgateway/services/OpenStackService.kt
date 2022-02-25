@@ -421,7 +421,8 @@ class OpenStackService(
         val activeStacks = client.heat().stacks().list().filter {
             it.status in listOf(
                 StackStatus.CREATE_COMPLETE.name,
-                StackStatus.UPDATE_COMPLETE.name
+                StackStatus.UPDATE_COMPLETE.name,
+                StackStatus.UPDATE_FAILED.name
             )
         }
         logger.info("list: ${activeStacks.size}")
@@ -481,14 +482,15 @@ class OpenStackService(
             ).orThrow()
             if (jobs.items.size == 1) {
                 job = jobs.items.first()
-                logger.info("Found job in UCloud from old providerId. UcloudId: ${stack.ucloudId}: $job")
+                logger.info("Found job in UCloud from old providerId. stackUCloudId: ${stack.ucloudId}: UCloudid: ${job.id}")
             } else {
-                throw Exception("Could not charge job. Could not find job in UCloud: ${stack.ucloudId}")
+                logger.error("Could not charge job. Could not find job in UCloud: ${stack.ucloudId}")
+                return
             }
         }
 
 
-        logger.info("Found job $job")
+        logger.info("Charge. Found ucloud job with id: ${job.id} Owner: ${job.owner.createdBy}")
 
         val chargeTime: Instant = Instant.now()
         val lastChargedTime: Instant = getLastChargedFromStack(stack)
@@ -528,6 +530,7 @@ class OpenStackService(
             }
         }
 
+        logger.info("Will now charge: ${job.id} $lastChargedTime ${cpuCores.toLong()} $period")
         val response = JobsControl.chargeCredits.call(
             BulkRequest(
                 listOf(
@@ -544,15 +547,15 @@ class OpenStackService(
 
         if (response.duplicateCharges.isEmpty() && response.insufficientFunds.isEmpty()) {
             // Everything is good
-            logger.info("Stack ${stack}. ucloud job was charged for $cpuCores cores for period $period. $response")
+            logger.info("Stack ${stack.name}. ucloud job was charged for $cpuCores cores for period $period. $response")
             updateStackLastCharged(stack, chargeTime)
         } else if (response.insufficientFunds.isNotEmpty()) {
             // Insufficient funds
-            logger.info("Stack ${stack}. ucloud job has insufficient funds. $response")
+            logger.info("Stack ${stack.name}. ucloud job has insufficient funds. $response")
             // TODO Shelve job here?
         } else if (response.duplicateCharges.isNotEmpty()) {
             // Duplicate charges
-            logger.info("Stack ${stack}. ucloud job duplicate charges. $response")
+            logger.info("Stack ${stack.name}. ucloud job duplicate charges. $response")
             updateStackLastCharged(stack, chargeTime)
         }
         logger.info("Charge response:", response)
