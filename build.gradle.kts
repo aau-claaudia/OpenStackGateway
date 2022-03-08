@@ -2,16 +2,16 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 val openstack4jVersion = "3.10"
 val jacksonVersion = "2.13.1"
-val kotlinVersion = "1.6.0"
+val kotlinVersion = "1.6.10"
 
 plugins {
     id("org.springframework.boot") version "2.6.2"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
-    kotlin("jvm") version "1.6.0"
-    kotlin("plugin.spring") version "1.6.0"
-    kotlin("plugin.jpa") version "1.6.0"
-    kotlin("plugin.allopen") version "1.6.0"
-    kotlin("kapt") version "1.6.0"
+    kotlin("jvm") version "1.6.10"
+    kotlin("plugin.spring") version "1.6.10"
+    kotlin("plugin.jpa") version "1.6.10"
+    kotlin("plugin.allopen") version "1.6.10"
+    kotlin("kapt") version "1.6.10"
     id("org.liquibase.gradle") version "2.0.4"
     id("org.openapi.generator") version "5.0.0"
     id("org.jetbrains.dokka") version "1.5.30"
@@ -38,23 +38,23 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-webflux:2.6.2")
+    implementation("org.springframework.boot:spring-boot-starter-webflux:2.6.3")
     implementation("org.springframework.cloud:spring-cloud-starter-config:3.1.0")
     implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.1.0")
-    implementation("com.auth0:java-jwt:3.18.2")
+    implementation("com.auth0:java-jwt:3.18.3")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
-    implementation("org.springdoc:springdoc-openapi-ui:1.6.3")
+    implementation("org.springdoc:springdoc-openapi-ui:1.6.4")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.github.openstack4j.core:openstack4j-core:$openstack4jVersion")
     implementation("com.github.openstack4j.core.connectors:openstack4j-httpclient:$openstack4jVersion")
 
     // SDU UCloud Provider Module
-    implementation("dk.sdu.cloud:jvm-provider-support:2021.3.0-alpha16")
-    implementation("io.ktor:ktor-client-core:1.6.2")
-    implementation("io.ktor:ktor-client-cio:1.6.2")
-    implementation("io.ktor:ktor-client-websockets:1.6.2")
-    implementation("io.ktor:ktor-client-okhttp:1.6.2")
+    implementation("dk.sdu.cloud:jvm-provider-support:2022.1.4")
+    implementation("io.ktor:ktor-client-core:1.6.7")
+    implementation("io.ktor:ktor-client-cio:1.6.7")
+    implementation("io.ktor:ktor-client-websockets:1.6.7")
+    implementation("io.ktor:ktor-client-okhttp:1.6.7")
 
     implementation("com.squareup.okhttp3:okhttp:4.9.3")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
@@ -70,7 +70,7 @@ dependencies {
     }
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-    testImplementation("com.ninja-squad:springmockk:3.1.0")
+    testImplementation("com.ninja-squad:springmockk:3.1.1")
 
     kapt("org.springframework.boot:spring-boot-configuration-processor")
 }
