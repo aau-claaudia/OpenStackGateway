@@ -14,7 +14,7 @@ plugins {
     kotlin("kapt") version "1.6.10"
     id("org.liquibase.gradle") version "2.0.4"
     id("org.openapi.generator") version "5.0.0"
-    id("org.jetbrains.dokka") version "1.5.30"
+    id("org.jetbrains.dokka") version "1.6.10"
 }
 
 allOpen {
@@ -38,12 +38,12 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-webflux:2.6.3")
-    implementation("org.springframework.cloud:spring-cloud-starter-config:3.1.0")
-    implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.1.0")
+    implementation("org.springframework.boot:spring-boot-starter-webflux:2.6.4")
+    implementation("org.springframework.cloud:spring-cloud-starter-config:3.1.1")
+    implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.1.1")
     implementation("com.auth0:java-jwt:3.18.3")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
-    implementation("org.springdoc:springdoc-openapi-ui:1.6.4")
+    implementation("org.springdoc:springdoc-openapi-ui:1.6.6")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.github.openstack4j.core:openstack4j-core:$openstack4jVersion")
@@ -70,7 +70,7 @@ dependencies {
     }
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-    testImplementation("com.ninja-squad:springmockk:3.1.0")
+    testImplementation("com.ninja-squad:springmockk:3.1.1")
 
     kapt("org.springframework.boot:spring-boot-configuration-processor")
 }
