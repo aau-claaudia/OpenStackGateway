@@ -5,7 +5,7 @@ val jacksonVersion = "2.13.1"
 val kotlinVersion = "1.6.10"
 
 plugins {
-    id("org.springframework.boot") version "2.6.2"
+    id("org.springframework.boot") version "2.6.4"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
     kotlin("jvm") version "1.6.10"
     kotlin("plugin.spring") version "1.6.10"
@@ -13,7 +13,7 @@ plugins {
     kotlin("plugin.allopen") version "1.6.10"
     kotlin("kapt") version "1.6.10"
     id("org.liquibase.gradle") version "2.0.4"
-    id("org.openapi.generator") version "5.0.0"
+    id("org.openapi.generator") version "5.4.0"
     id("org.jetbrains.dokka") version "1.6.10"
 }
 
