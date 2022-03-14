@@ -14,13 +14,13 @@ updates:
 # Updates for Gradle dependencies used in the app
     - package-ecosystem: gradle
       directory: "/"
-      target-branch: "develop"
+      target-branch: "dev"
       schedule:
         interval: "daily"
       open-pull-requests-limit: 10
 # Updates for Github Actions used in the repo
     - package-ecosystem: "docker"
       directory: "/"
-      target-branch: "develop"
+      target-branch: "dev"
       schedule:
         interval: "daily"
