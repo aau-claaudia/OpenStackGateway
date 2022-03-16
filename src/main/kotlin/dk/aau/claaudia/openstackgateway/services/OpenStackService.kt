@@ -712,7 +712,6 @@ class OpenStackService(
         logger.error("Job could no be deleted", job)
         // Dont think we should send a status update here because the user should
         // be able to retry the delete
-        return
     }
 
     fun verifyJobs(jobs: List<Job>) {
