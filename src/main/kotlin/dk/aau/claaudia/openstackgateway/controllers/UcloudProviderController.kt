@@ -145,7 +145,7 @@ class SimpleCompute(
         openstackService.chargeDeleteJobs(request.items)
 
         log.info("Waiting for stacks to be deleted: $request")
-        openstackService.monitorStackDeletions(request.items)
+        openstackService.asyncMonitorStackDeletions(request.items)
 
         //FIXME Okay to return empty list here?
         return BulkResponse(listOf())
