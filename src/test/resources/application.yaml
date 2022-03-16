@@ -12,8 +12,8 @@ openstack:
   keyName: root_openstack-master01
   availabilityZone: nova
   monitor:
-    timeout: 60000
-    delay: 5000
+    timeout: 5000
+    delay: 500
 
 
 ucloud:
