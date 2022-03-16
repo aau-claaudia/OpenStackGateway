@@ -72,7 +72,6 @@ class OpenStackService(
      * If the token has expired, authenticate to get a new one.
      */
     private fun getClient(): OSClientV3 {
-        //OSFactory.enableHttpLoggingFilter(true)
         if (token?.hasExpired() == false) {
             logger.info("Using existing openstack token")
             return OSFactory.clientFromToken(token)
@@ -138,13 +137,25 @@ class OpenStackService(
         return flavor
     }
 
+    fun findStackIncludeDeleted(job: Job): Stack? {
+        val client = getClient()
+        val stacks = client.heat().stacks().list(
+            mapOf(
+                "show_deleted" to "True",
+                "name" to job.openstackName
+            )
+        )
+
+        return stacks.first()
+    }
+
     fun getStackByJob(job: Job): Stack? {
         val client = getClient()
         // UCloud have changed the JobIds from UUIDs to integers.
         // The old Id should still be on the job and is used to retrieve the stack
         val newIdStack = client.heat().stacks().getStackByName(job.openstackName)
         if (newIdStack == null) {
-            logger.info("Could not find stack from id: ${job.openstackName}. Try old id ${job.providerGeneratedId} ${job.oldOpenstackName}")
+            logger.info("Could not find stack from name: ${job.openstackName}. Try old name ${job.providerGeneratedId} ${job.oldOpenstackName}")
             val oldIdStack = client.heat().stacks().getStackByName(job.oldOpenstackName)
             if (oldIdStack != null) {
                 logger.info("Found: ${oldIdStack.name}")
@@ -669,33 +680,39 @@ class OpenStackService(
         }
     }
 
-    fun monitorStackDeletions(jobs: List<Job>) {
+    fun asyncMonitorStackDeletions(jobs: List<Job>) {
         Thread.sleep(5000) // TODO Status is not set if we change this too quickly (https://github.com/SDU-eScience/UCloud/issues/2303)
 
         for (job in jobs) {
             threadPool.execute {
-                val startTime = System.currentTimeMillis()
-                while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
-                    val stack = getStackByJob(job)
-                    if (stack == null) {
-                        logger.info("Could not find stack. Assume deleted", job.id)
-                        sendJobStatusMessage(job.id, JobState.SUCCESS, "Stack DELETE complete")
-                        return@execute
-
-                    }
-                    logger.info("Stack was found and not yet deleted", stack)
-                    // Sleep until next retry
-                    logger.info("Waiting to retry")
-                    Thread.sleep(config.monitor.delay)
-                }
-                // Job could not be deleted
-                logger.error("Job could no be deleted", job)
-                // Dont think we should send a status update here because the user should
-                // be able to retry the delete
-                //sendJobFailedMessage(job.id, "Could not delete job. Timeout exceeded")
+                monitorStackDeletion(job)
                 return@execute
             }
         }
+    }
+
+    fun monitorStackDeletion(job: Job) {
+        val startTime = System.currentTimeMillis()
+        while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
+            val stack = findStackIncludeDeleted(job)
+            if (stack != null && stack.status == StackStatus.DELETE_COMPLETE.name) {
+                logger.info("Found stack with status delete complete: ", job.openstackName)
+                sendJobStatusMessage(job.id, JobState.SUCCESS, "Stack DELETE complete")
+                return
+            } else if (stack == null) {
+                logger.info("Stack deletion could not find stack: ", job.openstackName)
+            } else {
+                logger.info("Stack deletion could not be verified. Status: ", stack.status)
+            }
+            // Sleep until next retry
+            logger.info("Waiting to retry")
+            Thread.sleep(config.monitor.delay)
+        }
+        // Job could not be deleted
+        logger.error("Job could no be deleted", job)
+        // Dont think we should send a status update here because the user should
+        // be able to retry the delete
+        return
     }
 
     fun verifyJobs(jobs: List<Job>) {
