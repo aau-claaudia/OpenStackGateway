@@ -433,7 +433,8 @@ class OpenStackService(
             it.status in listOf(
                 StackStatus.CREATE_COMPLETE.name,
                 StackStatus.UPDATE_COMPLETE.name,
-                StackStatus.UPDATE_FAILED.name
+                StackStatus.UPDATE_FAILED.name,
+                StackStatus.RESUME_COMPLETE
             )
         }
         logger.info("list: ${activeStacks.size}")
@@ -603,7 +604,7 @@ class OpenStackService(
      * Retrieve the template and remove the already saved ids.
      * Create a stackUpdate and include the updated tag and the existing template and parameters
      */
-    fun updateStackLastCharged(listStack: Stack, chargedAt: Instant) {
+    fun updateStackLastCharged(listStack: Stack, chargedAt: Instant): Boolean {
         // FIXME Store in database not openstack tags
         // Alternatively: Store on metadata on instance
 
@@ -614,7 +615,7 @@ class OpenStackService(
         val stack = client.heat().stacks().getStackByName(listStack.name)
         if (stack == null) {
             logger.error("Could not update lastcharged. Stack not found: $listStack.name")
-            return
+            return false
         }
 
         val templateAsMap = client.heat().templates().getTemplateAsMap(stack.name)
@@ -638,6 +639,7 @@ class OpenStackService(
             logger.error("Stack lastcharged timestamp could no be updated", stack)
         }
 
+        return update.isSuccess
     }
 
     fun getStackEvents(stackName: String, stackIdentity: String): MutableList<out Event>? {
