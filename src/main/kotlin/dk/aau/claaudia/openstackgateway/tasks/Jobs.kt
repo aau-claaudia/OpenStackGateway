@@ -23,6 +23,15 @@ class Jobs(private val openStackService: OpenStackService) {
     }
 
     /**
+     * Heartbeat monitor that creates a log entry for splunk
+     * This task is started every 5 minutes.
+     */
+    @Scheduled(cron = "0 0/5 * * * *")
+    fun heartbeat() {
+        logger.info("Service is running")
+    }
+
+    /**
      * TO BE IMPLEMENTED
      * Should remove failed stack creations
      * This task is started every hour.

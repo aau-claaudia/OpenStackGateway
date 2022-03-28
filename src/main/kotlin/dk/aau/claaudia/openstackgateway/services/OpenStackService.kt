@@ -607,9 +607,9 @@ class OpenStackService(
         // FIXME Store in database not openstack tags
         // Alternatively: Store on metadata on instance
 
-        //Start by getting the stack with all details.
-        //When stack is retrieved from list it doesn't have parameters
 
+        //Get the stack with all details.
+        //When stack is retrieved from list it doesn't have parameters
         val client = getClient()
         val stack = client.heat().stacks().getStackByName(listStack.name)
         if (stack == null) {
@@ -708,7 +708,6 @@ class OpenStackService(
             logger.info("Waiting to retry")
             Thread.sleep(config.monitor.delay)
         }
-        // Job could not be deleted
         logger.error("Job could no be deleted", job)
         // Dont think we should send a status update here because the user should
         // be able to retry the delete
@@ -732,12 +731,11 @@ class OpenStackService(
 
         if (stack == null) {
             logger.info("Could not find stack. Assume nothing", job, stack)
-            //sendJobStatusMessage(job.id, JobState.SUCCESS, "Stack was deleted")
             return
         }
 
         // Move this to config?
-        val statusMappings = mapOf<StackStatus, JobState>(
+        val statusMappings = mapOf(
             StackStatus.CREATE_COMPLETE to JobState.RUNNING,
             StackStatus.UPDATE_COMPLETE to JobState.RUNNING,
             StackStatus.CREATE_IN_PROGRESS to JobState.IN_QUEUE,
