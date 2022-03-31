@@ -1,4 +1,4 @@
-heat_template_version: 2014-10-16
+heat_template_version: 2018-08-31
 
 description:
   uCloud provisioned stack
@@ -31,18 +31,31 @@ parameters:
     description: Name of an existing key pair to use for the server
     constraints:
       - custom_constraint: nova.keypair
+  volume_size:
+    type: string
+    description: Volume size of the system volume of the Virtual Server
+    default: 10
 
 resources:
+  bootable_volume:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size }
+      image: { get_param: image }
+
   server:
     type: OS::Nova::Server
     properties:
-      image: { get_param: image }
       flavor: { get_param: flavor }
-      networks: [{network: {get_param: network} }]
+      networks: [ { network: { get_param: network } } ]
       security_groups: [ get_param: security_group ]
       user_data: { get_resource: cloud-init-config }
       user_data_format: RAW
       key_name: { get_param: key_name }
+      block_device_mapping:
+        - device_name: vda
+          volume_id: { get_resource: bootable_volume }
+          delete_on_termination: true
 
   cloud-init-config:
     type: OS::Heat::CloudConfig

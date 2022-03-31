@@ -270,12 +270,15 @@ class OpenStackService(
                 }
 
                 // Verify flavor exists
-                getFlavorByName(parameters["flavor"]) ?: run {
+                val flavor = getFlavorByName(parameters["flavor"]) ?: run {
                     val errorMessage = "Flavor not found: ${parameters["flavor"]}"
                     logger.error(errorMessage)
                     sendJobFailedMessage(job.id, errorMessage)
                     return@execute
                 }
+
+                // Set volume_size based on flavor
+                parameters["volume_size"] = flavor.disk.toString()
 
                 // Verify image exists
                 getImage(parameters["image"]) ?: run {
