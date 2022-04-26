@@ -8,6 +8,7 @@ import dk.aau.claaudia.openstackgateway.extensions.getLogger
 import dk.aau.claaudia.openstackgateway.extensions.oldOpenstackName
 import dk.aau.claaudia.openstackgateway.extensions.openstackName
 import dk.aau.claaudia.openstackgateway.extensions.ucloudId
+import dk.aau.claaudia.openstackgateway.models.InstanceStatus
 import dk.aau.claaudia.openstackgateway.models.StackStatus
 import dk.sdu.cloud.CommonErrorMessage
 import dk.sdu.cloud.PageV2
@@ -27,6 +28,7 @@ import dk.sdu.cloud.providers.call
 import org.openstack4j.api.Builders
 import org.openstack4j.api.OSClient.OSClientV3
 import org.openstack4j.model.common.Identifier
+import org.openstack4j.model.compute.Action
 import org.openstack4j.model.compute.Flavor
 import org.openstack4j.model.compute.Server
 import org.openstack4j.model.compute.VNCConsole
@@ -504,7 +506,6 @@ class OpenStackService(
             }
         }
 
-
         logger.info("Charge. Found ucloud job with id: ${job.id} Owner: ${job.owner.createdBy}")
 
         val chargeTime: Instant = Instant.now()
@@ -543,6 +544,14 @@ class OpenStackService(
                 logger.error("It makes no sense to charge zero minutes. UcloudId: ${stack.ucloudId}")
                 return
             }
+        }
+
+        // No charge If stack instance is shelved
+        val instance = getInstanceFromStack(stack)
+        if (instance?.status?.name == InstanceStatus.SHELVED_OFFLOADED.name) {
+            logger.info("Instance is SHELVED. Stack ${stack.name}. ucloud job was not charged for $cpuCores cores for period $period")
+            updateStackLastCharged(stack, chargeTime)
+            return
         }
 
         logger.info("Will now charge: ${job.id} $lastChargedTime ${cpuCores.toLong()} $period")
@@ -718,6 +727,57 @@ class OpenStackService(
         // be able to retry the delete
     }
 
+    fun asyncMonitorStackSuspensions(jobs: List<Job>) {
+        Thread.sleep(5000) // TODO Status is not set if we change this too quickly (https://github.com/SDU-eScience/UCloud/issues/2303)
+
+        for (job in jobs) {
+            threadPool.execute {
+                monitorInstance(job, InstanceStatus.SHELVED_OFFLOADED)
+                return@execute
+            }
+        }
+    }
+
+    fun asyncMonitorStackResumes(jobs: List<Job>) {
+        Thread.sleep(5000) // TODO Status is not set if we change this too quickly (https://github.com/SDU-eScience/UCloud/issues/2303)
+
+        for (job in jobs) {
+            threadPool.execute {
+                monitorInstance(job, InstanceStatus.ACTIVE)
+                return@execute
+            }
+        }
+    }
+
+    fun monitorInstance(job: Job, expectedStatus: InstanceStatus) {
+        val startTime = System.currentTimeMillis()
+        while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
+            val stack = getStackByJob(job)
+
+            if (stack != null) {
+                val instance = getInstanceFromStack(stack)
+                if (instance != null && instance.status.name == expectedStatus.name) {
+                    logger.info("Found stack with status delete complete: ${job.openstackName}")
+                    // TODO Implement when JobState.SUSPENDED is available
+                    // Status should be based on expected instance state
+                    // InstanceState.ACTIVE = JobState.RUNNING
+                    // InstanceState.SHELVED_OFFLOAED = JobState.SUSPENDED
+                    // sendJobStatusMessage(job.id, JobState.SUCCESS, "Suspend complete")
+                    return
+                } else {
+                    logger.info("Monitor stack suspend could not find instance from stack: ${stack.id}")
+                }
+            } else {
+                logger.info("Monitor stack suspend could not find stack from Job: ${job.openstackName}")
+            }
+
+            // Sleep until next retry
+            logger.info("Waiting to retry")
+            Thread.sleep(config.monitor.delay)
+        }
+        logger.error("Instance was not found in expected state: $expectedStatus. JobId: ${job.id}")
+    }
+
     fun verifyJobs(jobs: List<Job>) {
         for (job in jobs) {
             verifyJob(job)
@@ -767,6 +827,57 @@ class OpenStackService(
                 logger.info("Status verified: ${stack.status}", job, stack)
             }
         }
+    }
+
+    fun getInstanceFromStack(stack: Stack): Server? {
+        val client = getClient()
+
+        val resources = client.heat().resources().list(stack.id)
+        val serverResource = resources.first { x -> x.resourceName.equals("server") }
+
+        return client.compute().servers().get(serverResource.physicalResourceId)
+    }
+
+    fun suspendJobs(jobs: List<Job>) {
+        for (job in jobs) {
+            val stack = getStackByJob(job)
+            if (stack != null) {
+                chargeStack(stack)
+                suspendStack(stack)
+            } else {
+                logger.error("SuspendJobs could not find stack. JobId: ${job.id} StackName: ${job.openstackName}")
+            }
+        }
+    }
+
+    fun suspendStack(stack: Stack) {
+        val client = getClient()
+
+        val resources = client.heat().resources().list(stack.id)
+        val serverResource = resources.first { x -> x.resourceName.equals("server") }
+        client.compute().servers().action(serverResource.physicalResourceId, Action.SHELVE)
+        logger.info("Action.SHELVE sent to instance. StackId: ${stack.id}")
+    }
+
+    fun resumeJobs(jobs: List<Job>) {
+        for (job in jobs) {
+            val stack = getStackByJob(job)
+            if (stack != null) {
+                chargeStack(stack)
+                resumeStack(stack)
+            } else {
+                logger.error("ResumeJobs could not find stack. JobId: ${job.id} StackName: ${job.openstackName}")
+            }
+        }
+    }
+
+    fun resumeStack(stack: Stack) {
+        val client = getClient()
+
+        val resources = client.heat().resources().list(stack.id)
+        val serverResource = resources.first { x -> x.resourceName.equals("server") }
+        client.compute().servers().action(serverResource.physicalResourceId, Action.UNSHELVE)
+        logger.info("Action.UNSHELVE sent to instance. StackId: ${stack.id}")
     }
 
     fun removeFailedJobs() {

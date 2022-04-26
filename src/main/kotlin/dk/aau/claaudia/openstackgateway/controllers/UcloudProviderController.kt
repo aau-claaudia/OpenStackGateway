@@ -124,46 +124,27 @@ class SimpleCompute(
     }
 
     /**
-     * Unused for now.
-     * Ucloud plans to implement this and we need to decide how to suspend stacks in openstack
+     * Ucloud plans to implement this funtionality for VMs
      */
     override fun suspend(request: BulkRequest<Job>) {
-        //charge
-        //update timestamp
+        log.info("Suspending jobs: $request")
+        openstackService.suspendJobs(request.items)
 
-        // suspend stack
-        // instance is suspended
-        // shelve instance
+        log.info("Waiting for stacks to be suspended: $request")
+        openstackService.asyncMonitorStackSuspensions(request.items)
+    }
 
-        // charging should ignore shelved instances / suspended stacks
-        // charging should verify instance is not shelved?
+    /**
+     * Ucloud plans to implement this funtionality for VMs
+     */
+    // TODO Add override when UCloud adds suspend to library
+    //override fun resume(request: BulkRequest<Job>) {
+    fun resume(request: BulkRequest<Job>) {
+        log.info("Suspending jobs: $request")
+        openstackService.resumeJobs(request.items)
 
-        // starting up again
-        // update timestamp to now
-        // unshelve
-        // resume stack <- dette kan ikke lade sig gøre.. man skal måske lade stack være og altid kontrollere instance status
-
-        // IMPORTANT: Man kan ikke slette en stack der har en shelvet instance:
-        // Resource UPDATE failed: Conflict: resources.server: Cannot 'detach_interface'
-        // instance 655b3fb4-59d5-421a-a8e0-dbaae42a007a while it is in vm_state shelved_offloaded
-        // (HTTP 409) (Request-ID: req-74f8ebae-1a84-4caa-8cca-84e9a17e7785)
-
-        // NY PLAN
-        // charge stack as normal
-        // update timestamp as normalt
-
-        // find instance and shelve
-        // stack status not changed
-        // instance status is shutdown/shelved
-
-        // when charging: special case for stacks with shelved instance
-        // skip sending charge request but update timestamp. aka free
-        // the charging job must control this
-
-        // starting up again
-        // charge -> will just update timestamp
-
-        TODO("Not yet implemented")
+        log.info("Waiting for stacks to be resumed: $request")
+        openstackService.asyncMonitorStackResumes(request.items)
     }
 
     /**
