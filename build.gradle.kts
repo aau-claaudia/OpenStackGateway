@@ -7,14 +7,14 @@ val kotlinVersion = "1.6.20"
 plugins {
     id("org.springframework.boot") version "2.6.4"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
-    kotlin("jvm") version "1.6.10"
+    kotlin("jvm") version "1.6.21"
     kotlin("plugin.spring") version "1.6.20"
     kotlin("plugin.jpa") version "1.6.21"
     kotlin("plugin.allopen") version "1.6.20"
     kotlin("kapt") version "1.6.21"
     id("org.liquibase.gradle") version "2.0.4"
     id("org.openapi.generator") version "5.4.0"
-    id("org.jetbrains.dokka") version "1.6.20"
+    id("org.jetbrains.dokka") version "1.6.21"
 }
 
 allOpen {
