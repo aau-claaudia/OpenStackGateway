@@ -124,11 +124,27 @@ class SimpleCompute(
     }
 
     /**
-     * Unused for now.
-     * Ucloud plans to implement this and we need to decide how to suspend stacks in openstack
+     * Ucloud plans to implement this funtionality for VMs
      */
     override fun suspend(request: BulkRequest<Job>) {
-        TODO("Not yet implemented")
+        log.info("Suspending jobs: $request")
+        openstackService.suspendJobs(request.items)
+
+        log.info("Waiting for stacks to be suspended: $request")
+        openstackService.asyncMonitorStackSuspensions(request.items)
+    }
+
+    /**
+     * Ucloud plans to implement this funtionality for VMs
+     */
+    // TODO Add override when UCloud adds suspend to library
+    //override fun resume(request: BulkRequest<Job>) {
+    fun resume(request: BulkRequest<Job>) {
+        log.info("Suspending jobs: $request")
+        openstackService.resumeJobs(request.items)
+
+        log.info("Waiting for stacks to be resumed: $request")
+        openstackService.asyncMonitorStackResumes(request.items)
     }
 
     /**
