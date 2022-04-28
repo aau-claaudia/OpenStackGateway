@@ -783,6 +783,8 @@ class OpenStackService(
         }
     }
 
+    // kommentar
+
     fun monitorInstance(job: Job, expectedStatus: InstanceStatus) {
         val startTime = System.currentTimeMillis()
         while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
