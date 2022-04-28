@@ -27,9 +27,114 @@ class OpenStackServiceTest(
     @Qualifier("YAMLMapper")
     private val mapper: ObjectMapper
     ) {
+
     @BeforeAll
     fun setup() {
         println(">> Setup")
+    }
+
+    fun getTestJob(): Job {
+        return Job(
+            "44",
+            ResourceOwner("testmayn", "projekt1"),
+            emptyList(),
+            JobSpecification(
+                NameAndVersion("name", "version"),
+                ComputeProductReference("product1", "category1", "provider1"),
+                "navnet",
+                1,
+                false,
+                null, null, null, null
+            ),
+            JobStatus(JobState.IN_QUEUE, null, null, null, null, null, null),
+            getTimeMillis(),
+            null,
+            null
+        )
+    }
+
+    fun getStackCreateInProgress(): HeatStack {
+        val stackJson =
+            """
+            {
+                "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
+                "stack_name": "ucloud-1234",
+                "stack_status": ${StackStatus.CREATE_IN_PROGRESS},
+            }
+            """
+
+        return mapper.readValue(stackJson, HeatStack::class.java)
+    }
+
+    fun getStackCreateComplete(): HeatStack {
+        val stackJson =
+            """
+            {
+                "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
+                "stack_name": "ucloud-1234",
+                "stack_status": ${StackStatus.CREATE_COMPLETE},
+                "outputs": [
+                    {
+                        "output_key": "server_ip",
+                        "output_value": "127.0.0.1"
+                    }
+                ]
+            }
+            """
+
+        return mapper.readValue(stackJson, HeatStack::class.java)
+    }
+
+    fun getStackCreateFailed(): HeatStack {
+        val stackJson =
+            """
+            {
+                "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
+                "stack_name": "ucloud-1234",
+                "stack_status": ${StackStatus.CREATE_FAILED}
+            }
+            """
+
+        return mapper.readValue(stackJson, HeatStack::class.java)
+    }
+
+    fun getStackDeleteInProgress(): HeatStack {
+        val stackJson =
+            """
+            {
+            "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
+            "stack_name": "ucloud-1234",
+            "stack_status": ${StackStatus.DELETE_IN_PROGRESS},
+            }
+            """
+
+        return mapper.readValue(stackJson, HeatStack::class.java)
+    }
+
+    fun getStackDeleteComplete(): HeatStack {
+        val stackJson =
+            """
+            {
+            "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
+            "stack_name": "ucloud-1234",
+            "stack_status": ${StackStatus.DELETE_COMPLETE},
+            }
+            """
+
+        return mapper.readValue(stackJson, HeatStack::class.java)
+    }
+
+    fun getStackDeleteFailed(): HeatStack {
+        val stackJson =
+            """
+            {
+            "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
+            "stack_name": "ucloud-1234",
+            "stack_status": ${StackStatus.DELETE_FAILED},
+            }
+            """
+
+        return mapper.readValue(stackJson, HeatStack::class.java)
     }
 
     @Test
@@ -96,55 +201,92 @@ class OpenStackServiceTest(
     }
 
     @Test
-    fun `given job to delete send correct message`() {
-        val job: Job = Job(
-            "44",
-            ResourceOwner("testmayn", "projekt1"),
-            emptyList(),
-            JobSpecification(
-                NameAndVersion("name", "version"),
-                ComputeProductReference("product1", "category1", "provider1"),
-                "navnet",
-                1,
-                false,
-                null, null, null, null
-            ),
-            JobStatus(JobState.IN_QUEUE, null, null, null, null, null, null),
-            getTimeMillis(),
-            null,
-            null
-        )
-
-        val stackJson =
-            """
-            {
-            "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
-            "stack_name": "ucloud-1234",
-            "stack_status": ${StackStatus.DELETE_IN_PROGRESS},
-            }
-            """
-
-        val stack: Stack = mapper.readValue(stackJson, HeatStack::class.java)
-
-        val deletedStackJson =
-            """
-            {
-            "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
-            "stack_name": "ucloud-1234",
-            "stack_status": ${StackStatus.DELETE_COMPLETE},
-            }
-            """
-
-        val deletedStack: Stack = mapper.readValue(deletedStackJson, HeatStack::class.java)
+    fun `monitor stacks deletion send correct success message`() {
+        val stackDeleteInProgress = getStackDeleteInProgress()
+        val stackDeleteComplete = getStackDeleteComplete()
 
         val spyStack = spyk(openStackService)
 
-        every { spyStack.findStackIncludeDeleted(job) } returnsMany listOf(stack, stack, stack, deletedStack)
+        val job: Job = getTestJob()
+
+        every { spyStack.findStackIncludeDeleted(job) } returnsMany listOf(
+            stackDeleteInProgress,
+            stackDeleteInProgress,
+            stackDeleteInProgress,
+            stackDeleteComplete
+        )
         every { spyStack.sendJobStatusMessage(job.id, JobState.SUCCESS, "Stack DELETE complete") } returns Unit
 
-        spyStack.monitorStackDeletion(job)
+        spyStack.monitorDeletion(job)
 
         verify { spyStack.sendJobStatusMessage(job.id, JobState.SUCCESS, "Stack DELETE complete") }
+    }
+
+    @Test
+    fun `monitor failed stacks deletion reach timeout send nothing`() {
+        val stackDeleteInProgress = getStackDeleteInProgress()
+        val stackDeleteFailed = getStackDeleteFailed()
+
+        val spyStack = spyk(openStackService)
+
+        val job: Job = getTestJob()
+
+        every { spyStack.findStackIncludeDeleted(job) } returnsMany listOf(
+            stackDeleteInProgress,
+            stackDeleteInProgress,
+            stackDeleteInProgress,
+            stackDeleteFailed
+        )
+
+        spyStack.monitorDeletion(job)
+
+        verify(inverse = true) { spyStack.sendJobStatusMessage(job.id, any(), any()) }
+    }
+
+    @Test
+    fun `monitor stack creation send correct running message`() {
+        val stackCreateInProgress: Stack = getStackCreateInProgress()
+        val stackCreateComplete: Stack = getStackCreateComplete()
+        val job: Job = getTestJob()
+
+        val spyStack = spyk(openStackService)
+
+        every { spyStack.getStackByJob(job) } returnsMany listOf(
+            stackCreateInProgress,
+            stackCreateInProgress,
+            stackCreateInProgress,
+            stackCreateComplete
+        )
+        every { spyStack.sendJobStatusMessage(job.id, JobState.RUNNING, any()) } returns Unit
+
+        spyStack.monitorCreation(job)
+
+        verify {
+            spyStack.sendJobStatusMessage(
+                job.id, JobState.RUNNING, any()
+            )
+        }
+    }
+
+    @Test
+    fun `monitor failed stack creation send correct failed message`() {
+        val stackCreateInProgress: Stack = getStackCreateInProgress()
+        val stackCreateFailed: Stack = getStackCreateFailed()
+        val job: Job = getTestJob()
+
+        val spyStack = spyk(openStackService)
+
+        every { spyStack.getStackByJob(job) } returnsMany listOf(
+            stackCreateInProgress,
+            stackCreateInProgress,
+            stackCreateInProgress,
+            stackCreateFailed
+        )
+        every { spyStack.sendJobStatusMessage(job.id, JobState.FAILURE, any()) } returns Unit
+
+        spyStack.monitorCreation(job)
+
+        verify { spyStack.sendJobStatusMessage(job.id, JobState.FAILURE, "TEST TEST Could not start instance") }
     }
 
     @AfterAll

@@ -44,10 +44,6 @@ provider:
 messages:
   jobs:
     create-complete: |
-      Your new TESTESTSETSETSETSET
-
-      If a TEST:
-
-      SSH Access: ssh ucloud@{0}
+      Test machine ready! SSH Access: ssh ucloud@{0}
     create-failed: |
       TEST TEST Could not start instance

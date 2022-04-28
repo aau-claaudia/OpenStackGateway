@@ -151,12 +151,18 @@ class OpenStackService(
         return stacks.first()
     }
 
+    /**
+     * Retrieve corresponding stack in openstack of a UCloud job.
+     *
+     * The stack name is the ucloud id prefixed based on config.
+     */
     fun getStackByJob(job: Job): Stack? {
         val client = getClient()
         // UCloud have changed the JobIds from UUIDs to integers.
         // The old Id should still be on the job and is used to retrieve the stack
         val newIdStack = client.heat().stacks().getStackByName(job.openstackName)
         if (newIdStack == null) {
+            // FIXME Remove when stacks with old ids are deleted.
             logger.info("Could not find stack from name: ${job.openstackName}. Try old name ${job.providerGeneratedId} ${job.oldOpenstackName}")
             val oldIdStack = client.heat().stacks().getStackByName(job.oldOpenstackName)
             if (oldIdStack != null) {
@@ -342,48 +348,56 @@ class OpenStackService(
     }
 
     /**
-     * Monitor a list of jobs and send status to ucloud when jobs are running or failed
+     * Start creation monitor function for each job in a list of jobs
      *
-     * For each job start an async task that polls openstack for the corresponding stack
-     * Based on the config, have a delay between each poll and a timeout to stop polling.
-     * When the job is found in a create complete state, send the output IP to ucloud in a job success update
-     * If this IP is not found or the stack isnt created within the timeout, send a job failed update
+     * The monitor function will send a status to UCloud when stack create is complete/failed
      */
-    fun sendStatusWhenStackComplete(jobs: List<Job>) {
+    fun asyncMonitorCreations(jobs: List<Job>) {
         Thread.sleep(5000) // TODO Status is not set if we change this too quickly (https://github.com/SDU-eScience/UCloud/issues/2303)
 
         for (job in jobs) {
             threadPool.execute {
-                val startTime = System.currentTimeMillis()
-                while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
-                    val stack = getStackByJob(job)
-                    logger.info("Monitoring stack status", stack, stack?.status)
-                    if (stack != null && stack.status == StackStatus.CREATE_COMPLETE.name) {
-                        logger.info("Stack CREATE complete")
-                        val outputIP = stack.outputs.find { it["output_key"] == "server_ip" }
-                        if (!outputIP.isNullOrEmpty()) {
-                            sendJobRunningMessage(job.id, outputIP["output_value"] as String)
-                        } else {
-                            logger.error("Did not receive IP output from openstack", job, stack)
-                            sendJobFailedMessage(job.id, "Did not receive IP output from openstack")
-                        }
-
-                        return@execute
-                    }
-                    if (stack != null && stack.status == StackStatus.CREATE_FAILED.name) {
-                        logger.error("Stack create failed", job, stack)
-                        sendJobFailedMessage(job.id, "Job failed. Reason: ${stack.stackStatusReason}")
-                        return@execute
-                    }
-                    // Sleep until next retry
-                    logger.info("Waiting to retry")
-                    Thread.sleep(config.monitor.delay)
-                }
-                // Job could not be started within the timeout
-                logger.info("Could not start job within timeout: $job.id")
+                monitorCreation(job)
                 return@execute
             }
         }
+    }
+
+    /**
+     * Monitor job and send status to ucloud when jobs are running or failed
+     * Polls openstack continually for the corresponding stack
+     * Based on the config, have a delay between each poll and a timeout to stop polling.
+     * When the job is found in a create complete state, send the output IP to ucloud in a job running update
+     * If this IP is not found or the stack isnt created within the timeout, send a job failed update
+     */
+    fun monitorCreation(job: Job) {
+        val startTime = System.currentTimeMillis()
+        while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
+            val stack = getStackByJob(job)
+            logger.info("Monitoring stack status", stack, stack?.status)
+            if (stack != null && stack.status == StackStatus.CREATE_COMPLETE.name) {
+                logger.info("Stack CREATE complete")
+                val outputIP = stack.outputs?.find { it["output_key"] == "server_ip" }
+                if (!outputIP.isNullOrEmpty()) {
+                    sendJobRunningMessage(job.id, outputIP["output_value"] as String)
+                } else {
+                    logger.error("Did not receive IP output from openstack", job, stack)
+                    sendJobFailedMessage(job.id, "Did not receive IP output from openstack")
+                }
+
+                return
+            }
+            if (stack != null && stack.status == StackStatus.CREATE_FAILED.name) {
+                logger.error("Stack create failed", job, stack)
+                sendJobFailedMessage(job.id, "Job failed. Reason: ${stack.stackStatusReason}")
+                return
+            }
+            // Sleep until next retry
+            logger.info("Waiting to retry")
+            Thread.sleep(config.monitor.delay)
+        }
+        // Job could not be started within the timeout
+        logger.info("Could not start job within timeout: $job.id")
     }
 
     /**
@@ -665,6 +679,10 @@ class OpenStackService(
         }
     }
 
+    /**
+     * Charge a job before deleting it.
+     * FIXME Maybe add logic to disallow deletion if charging is unsuccessful.
+     */
     fun asyncChargeDeleteJob(job: Job) {
         threadPool.execute {
             val stack = getStackByJob(job)
@@ -677,6 +695,12 @@ class OpenStackService(
         }
     }
 
+    /**
+     * Takes a job and finds the corresponding stack then sends a stack delete request to openstack.
+     *
+     * First retrieve the stack based on the id on job
+     * then send delete request with id and name from job
+     */
     fun deleteJob(job: Job) {
         val client = getClient()
 
@@ -694,18 +718,30 @@ class OpenStackService(
         }
     }
 
-    fun asyncMonitorStackDeletions(jobs: List<Job>) {
+    /**
+     * Start deletion monitor function for each job in a list of jobs
+     *
+     * The monitor function will send a status to UCloud when stack is found in deleted status
+     */
+    fun asyncMonitorDeletions(jobs: List<Job>) {
         Thread.sleep(5000) // TODO Status is not set if we change this too quickly (https://github.com/SDU-eScience/UCloud/issues/2303)
 
         for (job in jobs) {
             threadPool.execute {
-                monitorStackDeletion(job)
+                monitorDeletion(job)
                 return@execute
             }
         }
     }
 
-    fun monitorStackDeletion(job: Job) {
+    /**
+     * Monitor job and send status to ucloud when jobs are found in deleted state
+     * Polls openstack continually for the corresponding stack
+     * Based on the config, have a delay between each poll and a timeout to stop polling.
+     * When the job is found in a delete complete state, send the output IP to ucloud in a job success update
+     * If this IP is not found or the stack isn't created within the timeout, don't send status
+     */
+    fun monitorDeletion(job: Job) {
         val startTime = System.currentTimeMillis()
         while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
             val stack = findStackIncludeDeleted(job)
@@ -723,8 +759,6 @@ class OpenStackService(
             Thread.sleep(config.monitor.delay)
         }
         logger.error("Job could no be deleted", job)
-        // Dont think we should send a status update here because the user should
-        // be able to retry the delete
     }
 
     fun asyncMonitorStackSuspensions(jobs: List<Job>) {
