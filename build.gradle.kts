@@ -11,7 +11,7 @@ plugins {
     kotlin("plugin.spring") version "1.6.20"
     kotlin("plugin.jpa") version "1.6.20"
     kotlin("plugin.allopen") version "1.6.20"
-    kotlin("kapt") version "1.6.20"
+    kotlin("kapt") version "1.6.21"
     id("org.liquibase.gradle") version "2.0.4"
     id("org.openapi.generator") version "5.4.0"
     id("org.jetbrains.dokka") version "1.6.20"
@@ -40,7 +40,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-webflux:2.6.6")
     implementation("org.springframework.cloud:spring-cloud-starter-config:3.1.1")
-    implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.1.1")
+    implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.1.2")
     implementation("com.auth0:java-jwt:3.19.1")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
     implementation("org.springdoc:springdoc-openapi-ui:1.6.7")
