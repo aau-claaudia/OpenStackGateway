@@ -66,6 +66,11 @@ class TemplateServiceTest(@Autowired val templateService: TemplateService) {
                 "type" to "string",
                 "default" to "ucloud"
             ),
+            "volume_size" to mapOf(
+                "default" to 10,
+                "description" to "Volume size of the system volume of the Virtual Server",
+                "type" to "string"
+            )
         )
 
         assertThat(templateParameters).isEqualTo(expectedParameters)
