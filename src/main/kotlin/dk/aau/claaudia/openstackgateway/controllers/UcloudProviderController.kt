@@ -45,7 +45,7 @@ class SimpleCompute(
         openstackService.createStacks(request.items)
 
         log.info("Waiting for stacks to start: $request")
-        openstackService.sendStatusWhenStackComplete(request.items)
+        openstackService.asyncMonitorCreations(request.items)
 
         // FIXME What ids to return here?
         return BulkResponse(listOf())
@@ -161,7 +161,7 @@ class SimpleCompute(
         openstackService.chargeDeleteJobs(request.items)
 
         log.info("Waiting for stacks to be deleted: $request")
-        openstackService.asyncMonitorStackDeletions(request.items)
+        openstackService.asyncMonitorDeletions(request.items)
 
         //FIXME Okay to return empty list here?
         return BulkResponse(listOf())
