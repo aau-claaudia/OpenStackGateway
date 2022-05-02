@@ -67,6 +67,7 @@ class SimpleCompute(
 
     override fun openInteractiveSession(request: BulkRequest<JobsProviderOpenInteractiveSessionRequestItem>): BulkResponse<OpenSession> {
         TODO("Not yet implemented")
+        // Implementation
     }
 
     /**
