@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
 import org.springframework.context.annotation.Profile
-import org.springframework.web.filter.CommonsRequestLoggingFilter
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
@@ -41,21 +40,6 @@ class UCloudSpringConfigTest(
 
         //Use this for debugging only. It destroys the request body
         //registry.addInterceptor(requestInterceptor)//.maybe patterns here?
-    }
-}
-
-// This adds logging of requests
-@Configuration
-class RequestLoggingTest {
-    @Bean
-    fun requestLoggingFilter(): CommonsRequestLoggingFilter? {
-        val loggingFilter = CommonsRequestLoggingFilter()
-        loggingFilter.setIncludeClientInfo(true)
-        loggingFilter.setIncludeQueryString(true)
-        loggingFilter.setIncludePayload(true)
-        loggingFilter.setIncludeHeaders(false)
-        loggingFilter.setMaxPayloadLength(64000)
-        return loggingFilter
     }
 }
 
