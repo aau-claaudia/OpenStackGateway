@@ -829,7 +829,7 @@ class OpenStackService(
         val stack = getStackByJob(job)
 
         if (stack == null) {
-            logger.info("Could not find stack. Assume nothing", job, stack)
+            logger.info("Could not find stack with jobid ${job.id}. Assume nothing.")
             return
         }
 
@@ -846,7 +846,7 @@ class OpenStackService(
         when {
             expectedJobState == null -> {
                 // StatusMappings should be expanded to avoid this
-                logger.info("Unhandled status: ${stack.status}", job, stack)
+                logger.info("Unhandled status: ${stack.status}. JobID: ${job.id}. Stack: ${stack.id}")
                 sendJobStatusMessage(
                     job.id, JobState.RUNNING,
                     "ERROR, Unknown status: ${job.status.state.name}"
@@ -854,11 +854,11 @@ class OpenStackService(
             }
             job.status.state != expectedJobState -> {
                 // Status in ucloud is not as expected. Send update.
-                logger.info("Job status not as expected, updating ucloud: ${stack.status}", job, stack)
+                logger.info("Job status not as expected, updating ucloud: ${stack.status}. Job: ${job.id} stack ${stack.id}")
                 sendJobStatusMessage(job.id, expectedJobState, "Stack status: ${stack.status}")
             }
             else -> {
-                logger.info("Status verified: ${stack.status}", job, stack)
+                logger.info("Status verified: ${stack.status} jobid ${job.id} stack ${stack.id}")
             }
         }
     }

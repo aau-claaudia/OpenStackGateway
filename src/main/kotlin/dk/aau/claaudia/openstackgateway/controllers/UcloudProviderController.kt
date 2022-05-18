@@ -175,7 +175,7 @@ class SimpleCompute(
      * Verify that ucloud has the corrent status of the provided jobs/stacks
      */
     override fun verify(request: BulkRequest<Job>) {
-        log.info("verify jobs: $request")
+        log.info("verify jobs request received. size: ${request.items.size}")
         openstackService.verifyJobs(request.items)
     }
 
