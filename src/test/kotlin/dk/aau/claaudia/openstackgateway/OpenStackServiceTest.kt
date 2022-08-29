@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.openstack4j.model.heat.Stack
 import org.openstack4j.openstack.heat.domain.HeatStack
+import org.openstack4j.openstack.image.v2.domain.GlanceImage
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.context.SpringBootTest
@@ -152,17 +153,32 @@ class OpenStackServiceTest(
     }
 
     @Test
+    fun `given new naming convention name and version map to correct openstack name`() {
+        val imageJson =
+            """
+            {
+            "name": "ucloud-cuda-ubuntu-20.04",
+            "id": "1bea47ed-f6a9-463b-b423-14b9cca9ad27",
+            },
+            """
+
+        val openstackImage = mapper.readValue(imageJson, GlanceImage::class.java)
+
+        val spyStack = spyk(openStackService)
+        every { spyStack.listImages(any()) } returns listOf(
+            openstackImage,
+        )
+
+        val image = spyStack.mapImage("cuda-ubuntu", "20.04")
+
+        assertThat(image).isEqualTo("1bea47ed-f6a9-463b-b423-14b9cca9ad27")
+    }
+
+    @Test
     fun `given name and version find openstack name`() {
         val image = openStackService.mapImage("aau-ubuntu-vm", "16.04")
 
         assertThat(image).isEqualTo("Ubuntu 16.04 LTS")
-    }
-
-    @Test
-    fun `given name and version find blank`() {
-        val image = openStackService.mapImage("aau-ubuntu-vm", "14.04")
-
-        assertThat(image).isEqualTo("")
     }
 
     @Test
