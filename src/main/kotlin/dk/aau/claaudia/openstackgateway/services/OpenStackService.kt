@@ -99,10 +99,10 @@ class OpenStackService(
         return getClient().compute().servers().list()
     }
 
-    fun listImages(): List<Image?> {
+    fun listImages(filterParams: Map<String, String>): List<Image?> {
         val client = getClient()
         logger.info("client, $client")
-        return client.imagesV2().list()
+        return client.imagesV2().list(filterParams)
     }
 
     fun getImage(id: String?): Image? {
@@ -178,17 +178,38 @@ class OpenStackService(
      * Since ucloud uses name and version and not a unique name/id
      * we use this config mapping instead of a strict naming convention of images
      * The config is also used to control which images are available
+     *
+     * This above will be faced out when the a naming convention is implemented.
+     * New functionality
+     * All ucloud app names and versions can be mapped to a name of a openstack image
+     * using: ucloud-name-version
+     * Example: ucloudName: ubuntu, ucloudVersion: 20.04 will give the openstack name: "ucloud-ubuntu-20.04"
+     * We still need the id so get that from openstack
      */
     fun mapImage(name: String, version: String): String {
+        // TODO Remove everything related to config when only correctly named images are used
         val image = provider.images.firstOrNull { it.ucloudName == name && it.ucloudVersion == version }
+        var openstackImage: Image? = null
+
+        if (image == null) {
+            val expectedOpenstackName = "ucloud-$name-$version"
+            logger.info("Trying to find image by name $expectedOpenstackName")
+            openstackImage = listImages(mapOf("name" to expectedOpenstackName)).firstOrNull()
+        }
 
         return when {
             image?.openstackId?.isNotBlank() == true -> {
                 image.openstackId
             }
+
             image?.openstackName?.isNotBlank() == true -> {
                 image.openstackName
             }
+
+            openstackImage?.id?.isNotBlank() == true -> {
+                openstackImage.id
+            }
+
             else -> {
                 ""
             }
