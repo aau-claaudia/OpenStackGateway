@@ -54,7 +54,7 @@ dependencies {
     implementation("io.ktor:ktor-client-core:1.6.7")
     implementation("io.ktor:ktor-client-cio:1.6.7")
     implementation("io.ktor:ktor-client-websockets:1.6.7")
-    implementation("io.ktor:ktor-client-okhttp:1.6.7")
+    implementation("io.ktor:ktor-client-okhttp:2.1.1")
 
     implementation("com.squareup.okhttp3:okhttp:4.9.3")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
