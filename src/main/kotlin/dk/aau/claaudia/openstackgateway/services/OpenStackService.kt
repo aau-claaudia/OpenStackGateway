@@ -193,8 +193,9 @@ class OpenStackService(
 
         if (image == null) {
             val expectedOpenstackName = "ucloud-$name-$version"
-            logger.info("Trying to find image by name $expectedOpenstackName")
+            logger.info("Trying to find image by tag $expectedOpenstackName")
             openstackImage = listImages(mapOf("tag" to expectedOpenstackName)).firstOrNull()
+            logger.info("Found image: $openstackImage")
         }
 
         return when {
