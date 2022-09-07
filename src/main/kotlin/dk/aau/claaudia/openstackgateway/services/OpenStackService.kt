@@ -186,16 +186,18 @@ class OpenStackService(
      * Example: ucloudName: ubuntu, ucloudVersion: 20.04 will give the openstack name: "ucloud-ubuntu-20.04"
      * We still need the id so get that from openstack
      */
-    fun mapImage(name: String, version: String): String {
-        // TODO Remove everything related to config when only correctly named images are used
+    fun mapImage(name: String, version: String, toolImage: String?): String {
+        // TODO Remove everything related to config when only correctly named images are used. aka use toolImage
         val image = provider.images.firstOrNull { it.ucloudName == name && it.ucloudVersion == version }
         var openstackImage: Image? = null
 
-        if (image == null) {
-            val expectedOpenstackName = "ucloud-$name-$version"
-            logger.info("Trying to find image by name $expectedOpenstackName")
-            openstackImage = listImages(mapOf("tag" to expectedOpenstackName)).firstOrNull()
+        logger.info("mapImage input: $version, $name, $toolImage .")
+
+        if (image == null && toolImage != null) {
+            logger.info("Trying to find image by tag $toolImage")
+            openstackImage = listImages(mapOf("tag" to toolImage)).firstOrNull()
         }
+        logger.info("Found image: $openstackImage")
 
         return when {
             image?.openstackId?.isNotBlank() == true -> {
@@ -225,7 +227,11 @@ class OpenStackService(
     fun prepareParameters(job: Job): MutableMap<String, String> {
         val parameters = mutableMapOf<String, String>()
 
-        parameters["image"] = mapImage(job.specification.application.name, job.specification.application.version)
+        parameters["image"] = mapImage(
+            job.specification.application.name,
+            job.specification.application.version,
+            job.status.resolvedApplication?.invocation?.tool?.tool?.description?.image
+        )
         parameters["flavor"] = job.specification.product.id
 
         // FIXME Handle all cases here. Consider handling these with json objects?
