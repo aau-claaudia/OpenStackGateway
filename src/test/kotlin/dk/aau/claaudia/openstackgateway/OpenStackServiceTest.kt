@@ -140,14 +140,14 @@ class OpenStackServiceTest(
 
     @Test
     fun `given name and version find openstack id`() {
-        val image = openStackService.mapImage("aau-ubuntu-vm", "20.04")
+        val image = openStackService.mapImage("aau-ubuntu-vm", "20.04", "very-strange-name")
 
         assertThat(image).isEqualTo("f94ae063-dba2-42be-8435-6f031583fe1f")
     }
 
     @Test
     fun `given another name and version find openstack id`() {
-        val image = openStackService.mapImage("aau-ubuntu-vm", "18.04")
+        val image = openStackService.mapImage("aau-ubuntu-vm", "18.04", "is-not-used-here")
 
         assertThat(image).isEqualTo("d94ae063-dba2-42be-8435-6f031583fe1f")
     }
@@ -169,14 +169,14 @@ class OpenStackServiceTest(
             openstackImage,
         )
 
-        val image = spyStack.mapImage("cuda-ubuntu", "20.04")
+        val image = spyStack.mapImage("cuda-ubuntu", "20.04", "ucloud-cuda-ubuntu-20.04")
 
         assertThat(image).isEqualTo("1bea47ed-f6a9-463b-b423-14b9cca9ad27")
     }
 
     @Test
     fun `given name and version find openstack name`() {
-        val image = openStackService.mapImage("aau-ubuntu-vm", "16.04")
+        val image = openStackService.mapImage("aau-ubuntu-vm", "16.04", "not used")
 
         assertThat(image).isEqualTo("Ubuntu 16.04 LTS")
     }
