@@ -14,7 +14,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.openstack4j.model.compute.Flavor
 import org.openstack4j.model.heat.Stack
+import org.openstack4j.openstack.compute.domain.NovaFlavor
 import org.openstack4j.openstack.heat.domain.HeatStack
 import org.openstack4j.openstack.image.v2.domain.GlanceImage
 import org.springframework.beans.factory.annotation.Autowired
@@ -303,6 +305,42 @@ class OpenStackServiceTest(
         spyStack.monitorCreation(job)
 
         verify { spyStack.sendJobStatusMessage(job.id, JobState.FAILURE, "TEST TEST Could not start instance") }
+    }
+
+    @Test
+    fun `test retrieve products`() {
+        val flavor1: Flavor = mapper.readValue(
+            """
+            {
+            "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
+            "name": "uc-t4-1",
+            }
+            """, NovaFlavor::class.java
+        )
+        val flavor2: Flavor = mapper.readValue(
+            """
+            {
+            "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864l",
+            "name": "small",
+            }
+            """, NovaFlavor::class.java
+        )
+
+        val spyStack = spyk(openStackService)
+
+        every { spyStack.listFlavors() } returns listOf(
+            flavor1, flavor2
+        )
+
+        val expectedResult = listOf(
+            mapOf("name" to "uc-t4-1", "id" to "3095aefc-09fb-4bc7-b1f0-f21a304e864c"),
+            mapOf("name" to "uc-t4-1-h", "id" to "3095aefc-09fb-4bc7-b1f0-f21a304e864c"),
+            mapOf("name" to "small", "id" to "3095aefc-09fb-4bc7-b1f0-f21a304e864l"),
+            mapOf("name" to "small-h", "id" to "3095aefc-09fb-4bc7-b1f0-f21a304e864l")
+        )
+
+        val retrievedProducts = spyStack.retrieveProducts()
+        assertThat(retrievedProducts).isEqualTo(expectedResult)
     }
 
     @AfterAll
