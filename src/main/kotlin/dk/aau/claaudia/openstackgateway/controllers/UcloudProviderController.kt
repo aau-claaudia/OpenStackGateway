@@ -80,11 +80,11 @@ class SimpleCompute(
         log.info("Retrieving products")
 
         val response = BulkResponse(
-            openstackService.listFlavors().filterNotNull().map { flavor ->
+            openstackService.retrieveProducts().map { flavor ->
                 ComputeSupport(
                     ProductReference(
-                        flavor.name,
-                        openstackService.getFlavorExtraSpecs(flavor.id).getOrDefault(
+                        flavor.getValue("name"),
+                        openstackService.getFlavorExtraSpecs(flavor.getValue("id")).getOrDefault(
                             "availability_zone", providerProperties.defaultProductCategory
                         ),
                         providerProperties.id

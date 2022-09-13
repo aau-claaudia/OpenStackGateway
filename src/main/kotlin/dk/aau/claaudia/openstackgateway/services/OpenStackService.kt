@@ -139,6 +139,22 @@ class OpenStackService(
         return flavor
     }
 
+    /*
+     * Retrieve flavors from openstack which ucloud can use.
+     * The -h suffix is added in order to support hour-based billing
+     * This is not used in our end but in ucloud
+     */
+    fun retrieveProducts(): MutableList<Map<String, String>> {
+        val flavors: MutableList<Map<String, String>> = mutableListOf()
+
+        listFlavors().filterNotNull().forEach {
+            flavors.add(mapOf("name" to it.name, "id" to it.id))
+            flavors.add(mapOf("name" to it.name + "-h", "id" to it.id))
+        }
+
+        return flavors
+    }
+
     fun findStackIncludeDeleted(job: Job): Stack? {
         val client = getClient()
         val stacks = client.heat().stacks().list(
@@ -232,7 +248,14 @@ class OpenStackService(
             job.specification.application.version,
             job.status.resolvedApplication?.invocation?.tool?.tool?.description?.image
         )
-        parameters["flavor"] = job.specification.product.id
+
+        /**
+         * Ucloud has 'duplicates' for products where one indicates per hour billing
+         * example uc-t4-1 and uc-t4-h
+         * Both of these should 'map' to the openstack flavor uc-t4
+         * and the suffix is removed
+         */
+        parameters["flavor"] = job.specification.product.id.removeSuffix("-h")
 
         // FIXME Handle all cases here. Consider handling these with json objects?
         for (parameter in job.specification.parameters!!) {
