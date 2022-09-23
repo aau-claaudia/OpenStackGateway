@@ -14,6 +14,7 @@ import dk.sdu.cloud.CommonErrorMessage
 import dk.sdu.cloud.PageV2
 import dk.sdu.cloud.accounting.api.Product
 import dk.sdu.cloud.accounting.api.ProductPriceUnit
+import dk.sdu.cloud.accounting.api.ProductReference
 import dk.sdu.cloud.accounting.api.providers.ResourceBrowseRequest
 import dk.sdu.cloud.accounting.api.providers.ResourceChargeCredits
 import dk.sdu.cloud.accounting.api.providers.ResourceRetrieveRequest
@@ -137,6 +138,39 @@ class OpenStackService(
         val flavor = getClient().compute().flavors().list().first { it.name == name }
         logger.info("flavor by name: $flavor")
         return flavor
+    }
+
+    fun retrieveProducts(): List<ComputeSupport> {
+        return listFlavors().filterNotNull().map { flavor ->
+            ComputeSupport(
+                ProductReference(
+                    flavor.name,
+                    getFlavorExtraSpecs(flavor.id).getOrDefault(
+                        "availability_zone", provider.defaultProductCategory
+                    ).plus(if (flavor.name.endsWith("-h")) "-h" else ""),
+                    provider.id
+                ),
+                ComputeSupport.Docker(
+                    enabled = false,
+                    web = false,
+                    vnc = false,
+                    logs = false,
+                    terminal = false,
+                    peers = false,
+                    timeExtension = false,
+                    utilization = false
+                ),
+                ComputeSupport.VirtualMachine(
+                    enabled = true,
+                    logs = false,
+                    vnc = false,
+                    terminal = false,
+                    suspension = false,
+                    timeExtension = false,
+                    utilization = false
+                )
+            )
+        }
     }
 
     fun findStackIncludeDeleted(job: Job): Stack? {
