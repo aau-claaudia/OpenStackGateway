@@ -5,7 +5,6 @@ import dk.aau.claaudia.openstackgateway.config.UCloudProperties
 import dk.aau.claaudia.openstackgateway.services.OpenStackService
 import dk.sdu.cloud.CommonErrorMessage
 import dk.sdu.cloud.FindByStringId
-import dk.sdu.cloud.accounting.api.ProductReference
 import dk.sdu.cloud.app.orchestrator.api.*
 import dk.sdu.cloud.calls.BulkRequest
 import dk.sdu.cloud.calls.BulkResponse
@@ -80,36 +79,7 @@ class SimpleCompute(
         log.info("Retrieving products")
 
         val response = BulkResponse(
-            openstackService.listFlavors().filterNotNull().map { flavor ->
-                ComputeSupport(
-                    ProductReference(
-                        flavor.name,
-                        openstackService.getFlavorExtraSpecs(flavor.id).getOrDefault(
-                            "availability_zone", providerProperties.defaultProductCategory
-                        ),
-                        providerProperties.id
-                    ),
-                    ComputeSupport.Docker(
-                        enabled = false,
-                        web = false,
-                        vnc = false,
-                        logs = false,
-                        terminal = false,
-                        peers = false,
-                        timeExtension = false,
-                        utilization = false
-                    ),
-                    ComputeSupport.VirtualMachine(
-                        enabled = true,
-                        logs = false,
-                        vnc = false,
-                        terminal = false,
-                        suspension = false,
-                        timeExtension = false,
-                        utilization = false
-                    )
-                )
-            }
+            openstackService.retrieveProducts()
         )
 
         logger().info(response.toString())
