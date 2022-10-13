@@ -607,13 +607,17 @@ class OpenStackService(
         //        - This is counted in minutes/hours or days depending on the products unitOfPrice
 
         var period: Long = 0
-        if (product.unitOfPrice == ProductPriceUnit.CREDITS_PER_HOUR) {
+        if (product.unitOfPrice in arrayOf(ProductPriceUnit.CREDITS_PER_HOUR, ProductPriceUnit.UNITS_PER_HOUR)) {
             period = duration.toHours()
             if (period == 0L) {
                 logger.error("It makes no sense to charge zero hours. UcloudId: ${stack.ucloudId}")
                 return
             }
-        } else if (product.unitOfPrice == ProductPriceUnit.CREDITS_PER_MINUTE) {
+        } else if (product.unitOfPrice in arrayOf(
+                ProductPriceUnit.CREDITS_PER_MINUTE,
+                ProductPriceUnit.UNITS_PER_MINUTE
+            )
+        ) {
             period = duration.toMinutes()
             if (period == 0L) {
                 logger.error("It makes no sense to charge zero minutes. UcloudId: ${stack.ucloudId}")
@@ -629,7 +633,7 @@ class OpenStackService(
             return
         }
 
-        logger.info("Will now charge: ${job.id} $lastChargedTime ${cpuCores.toLong()} $period")
+        logger.info("Will now charge: ${job.id} ${product.unitOfPrice} $lastChargedTime ${cpuCores.toLong()} $period")
         val response = JobsControl.chargeCredits.call(
             BulkRequest(
                 listOf(
