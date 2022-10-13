@@ -607,7 +607,9 @@ class OpenStackService(
         //        - This is counted in minutes/hours or days depending on the products unitOfPrice
 
         var period: Long = 0
-        if (product.unitOfPrice in arrayOf(ProductPriceUnit.CREDITS_PER_HOUR, ProductPriceUnit.UNITS_PER_HOUR)) {
+        if (product.unitOfPrice in arrayOf(
+                ProductPriceUnit.CREDITS_PER_HOUR,
+                ProductPriceUnit.UNITS_PER_HOUR)) {
             period = duration.toHours()
             if (period == 0L) {
                 logger.error("It makes no sense to charge zero hours. UcloudId: ${stack.ucloudId}")
