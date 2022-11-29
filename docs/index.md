@@ -10,7 +10,7 @@ Compute provider API for UCloud
 
 ## Overview
 
-![Overview](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/aau-claaudia/OpenStackGateway/provider-support/docs/diagrams/overview.iuml)
+![Overview](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/aau-claaudia/OpenStackGateway/main/docs/diagrams/overview.iuml)
 
 This service facilitates communication between UCloud and Claaudia OpenStack.
 In UCloud terms, this is a compute provider, that provides a compute service to UCloud.
@@ -67,7 +67,7 @@ A monitoring thread is started for each stack that will send a status update to 
 
 #### Sequence diagram for the create flow
 
-![Overview](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/aau-claaudia/OpenStackGateway/provider-support/docs/diagrams/create-stack-sequence.iuml)
+![Overview](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/aau-claaudia/OpenStackGateway/main/docs/diagrams/create-stack-sequence.iuml)
 
 ### Delete
 Deletes one or more compute jobs by deleting stacks in OpenStack
@@ -76,7 +76,7 @@ The corresponding stacks are found in OpenStack and delete requests are sent.
 
 #### Sequence diagram for the delete flow
 
-![Overview](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/aau-claaudia/OpenStackGateway/provider-support/docs/diagrams/delete-stack-sequence.iuml)
+![Overview](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/aau-claaudia/OpenStackGateway/main/docs/diagrams/delete-stack-sequence.iuml)
 
 ### Extend
 Todo: Not implemented / Not applicable for virtual machines
