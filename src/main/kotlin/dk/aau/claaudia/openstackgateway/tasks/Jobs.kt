@@ -30,6 +30,8 @@ class Jobs(private val openStackService: OpenStackService) {
     @Scheduled(cron = "0 0/5 * * * *")
     fun heartbeat() {
         logger.info("Service is running")
+
+        openStackService.monitorThreads();
     }
 
     /**

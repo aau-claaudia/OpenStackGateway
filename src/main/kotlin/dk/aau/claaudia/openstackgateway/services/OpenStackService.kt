@@ -49,7 +49,9 @@ import java.text.MessageFormat
 import java.time.Duration
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ThreadPoolExecutor
 
 @Service
 class OpenStackService(
@@ -64,7 +66,18 @@ class OpenStackService(
     private var token: Token? = null
     private fun Token.hasExpired(): Boolean = expires.before(Date())
 
-    private val threadPool = Executors.newCachedThreadPool()
+    private val threadPool: ExecutorService = Executors.newFixedThreadPool(10)
+
+    fun monitorThreads() {
+        logger.info("Monitor threads:")
+        if (threadPool is ThreadPoolExecutor) {
+            logger.info("Pool size    : ${threadPool.poolSize}")
+            logger.info("Max pool size: ${threadPool.largestPoolSize}")
+            logger.info("Active count : ${threadPool.activeCount}")
+            logger.info("Task Count   : ${threadPool.taskCount}")
+            logger.info("Queue size   : ${threadPool.queue.size}")
+        }
+    }
 
     /**
      * Handle openstack authentication.
