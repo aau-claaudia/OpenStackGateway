@@ -6,7 +6,7 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
 /**
- * This class contains the job that are run on a schedule
+ * This class contains the job that are run on a schedule.
  *
  * @property openStackService openstack service used to do openstack related operations such as charging of stacks
  */
