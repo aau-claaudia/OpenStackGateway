@@ -10,11 +10,11 @@ openstack:
   network: 2fa0bca2-6153-4753-a8e3-ddb588d29436
   securityGroup: 50492808-5eb0-4a49-a6fd-163740a44f9d
   keyName: root_openstack-master01
-  availabilityZone: nova
   monitor:
-    timeout: 5000
-    delay: 500
-
+    timeout: 50
+    delay: 1
+  janitor:
+    deleteShutoffInstanceAfterDays: 30
 
 ucloud:
   certificate: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjF1Hvr8J6lZK2h7Jm7HtV8r4m7H+pRFblvnAxEhWL4RFADxL+/e6+3IVYJbJVfxYC6joFW6UaaReZ0AVq0QMpFre4vFelIaQT1Bf31bFvV4KLLkiIhonwO5fEwHXBj6AXDWZJD18MLUHrR9JH0X2v0lwUOC5ptKSf+tR1fyMXYoj9dZ2QfSu9twZ7S5ik2AIgLpGbku3M2cOBpOPiuoJpqdE7ukSoxDVrDsNSCq1S8ka44hSnWBnox8vEDfaz3GYZ6B8NCtWhIhj4NgPHJ8FLkoec92u9cQmbk7Qeajbcfq39RKP/cKSyZhAN2qLtKpyVSlslCe/l8+3ZkMsw0VjTwIDAQAB

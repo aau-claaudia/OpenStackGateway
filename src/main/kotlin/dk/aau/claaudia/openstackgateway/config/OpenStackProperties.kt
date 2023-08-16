@@ -14,11 +14,14 @@ data class OpenStackProperties(
     val network: String,
     val securityGroup: String,
     val keyName: String,
-    val monitor: Monitor
+    val monitor: Monitor,
+    val janitor: Janitor
     ) {
     data class Endpoints(val auth: String)
     data class Project(val id: String,
                        val name: String)
     data class Monitor(val timeout: Int, // Timeout in milliseconds
                        val delay: Long) // Delay between each retry in milliseconds
+
+    data class Janitor(val deleteShutoffInstanceAfterDays: Long) // The number of days a stack is left in a stopped state before deletion
 }
