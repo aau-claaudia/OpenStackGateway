@@ -33,6 +33,7 @@ import org.openstack4j.openstack.compute.domain.NovaFlavor
 import org.openstack4j.openstack.compute.domain.NovaServer
 import org.openstack4j.openstack.heat.domain.HeatStack
 import org.openstack4j.openstack.image.v2.domain.GlanceImage
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer
 import org.springframework.context.annotation.Import
@@ -62,6 +63,9 @@ class OpenStackServiceTest {
 
     @SpykBean
     private lateinit var openStackService: OpenStackService
+
+    @Autowired
+    private lateinit var messages: Messages
 
     private var mapper: ObjectMapper = ObjectMapper()
 
@@ -409,7 +413,7 @@ class OpenStackServiceTest {
 
         openStackService.monitorCreation(job)
 
-        verify { openStackService.sendJobStatusMessage(job.id, JobState.FAILURE, "TEST TEST Could not start instance") }
+        verify { openStackService.sendJobStatusMessage(job.id, JobState.FAILURE, messages.jobs.createFailed) }
     }
 
     @Test
@@ -502,7 +506,7 @@ class OpenStackServiceTest {
 
         openStackService.monitorShutdownInstanceSendUpdate(activeServer, job)
 
-        verify { openStackService.sendJobStatusMessage(job.id, JobState.SUSPENDED, "Instance stopped") }
+        verify { openStackService.sendJobStatusMessage(job.id, JobState.SUSPENDED, messages.jobs.instanceShutdown) }
     }
 
     @Test
@@ -561,7 +565,13 @@ class OpenStackServiceTest {
 
         openStackService.monitorStartInstanceSendUpdate(shutoffServer, job)
 
-        verify(exactly = 1) { openStackService.sendJobStatusMessage(job.id, JobState.RUNNING, "Instance started") }
+        verify(exactly = 1) {
+            openStackService.sendJobStatusMessage(
+                job.id,
+                JobState.RUNNING,
+                messages.jobs.instanceRestarted
+            )
+        }
     }
 
     @Test
