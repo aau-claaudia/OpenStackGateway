@@ -20,7 +20,7 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE}
 
   configserver:
-    image: ghcr.io/aau-claaudia/configserver:05f1a3
+    image: ghcr.io/aau-claaudia/configserver:3a5afa
     secrets:
       - source: config_privatekey
         target: /root/.ssh/id_rsa
