@@ -47,3 +47,11 @@ messages:
       Test machine ready! SSH Access: ssh ucloud@{0}
     create-failed: |
       TEST TEST Could not start instance
+    instance-shutdown: |
+      Your instance has been temporarily paused due to resource limitations.
+      Don't worry, your data is safe and you can restart your instance by adding funds on UCloud.
+      If you have any questions or need assistance, feel free to reach out to our support team.
+    instance-restarted: |
+      Your instance has been successfully restarted.
+      Your resources are ready to go, and you can continue right where you left off.
+      If you have any further questions or need assistance, feel free to reach out to our support team.

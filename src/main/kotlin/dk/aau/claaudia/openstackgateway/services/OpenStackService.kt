@@ -507,22 +507,22 @@ class OpenStackService(
     /**
      * A shortcut function for sending job instance shutdown message
      */
-    fun sendInstanceShutdownMessage(jobId: String, message: String) {
+    fun sendInstanceShutdownMessage(jobId: String) {
         sendJobStatusMessage(
             jobId,
             JobState.SUSPENDED,
-            MessageFormat.format(messages.jobs.instanceShutdown, message)
+            messages.jobs.instanceShutdown
         )
     }
 
     /**
      * A shortcut function for sending job instance restart message
      */
-    fun sendInstanceRestartedMessage(jobId: String, message: String) {
+    fun sendInstanceRestartedMessage(jobId: String) {
         sendJobStatusMessage(
             jobId,
             JobState.RUNNING,
-            MessageFormat.format(messages.jobs.instanceRestarted, message)
+            messages.jobs.instanceRestarted
         )
     }
 
@@ -900,7 +900,7 @@ class OpenStackService(
             val instance = getInstanceFromId(server.id)
             if (instance != null && instance.status == Server.Status.SHUTOFF) {
                 logger.info("Found instance with status SHUTOFF: ", instance.id)
-                sendInstanceShutdownMessage(job.id, "Instance stopped")
+                sendInstanceShutdownMessage(job.id)
                 return
             } else if (instance == null) {
                 logger.info("Instance stopping could not find instance: ", server.id)
@@ -937,7 +937,7 @@ class OpenStackService(
             val instance = getInstanceFromId(server.id)
             if (instance != null && instance.status == Server.Status.ACTIVE) {
                 logger.info("Found instance with status ACTIVE: ", instance.id)
-                sendInstanceRestartedMessage(job.id, "Instance started")
+                sendInstanceRestartedMessage(job.id)
                 return
             } else if (instance == null) {
                 logger.info("Instance starting could not find instance: ", server.id)
