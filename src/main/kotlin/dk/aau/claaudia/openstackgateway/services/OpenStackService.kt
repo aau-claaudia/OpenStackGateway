@@ -505,6 +505,28 @@ class OpenStackService(
     }
 
     /**
+     * A shortcut function for sending job instance shutdown message
+     */
+    fun sendInstanceShutdownMessage(jobId: String, message: String) {
+        sendJobStatusMessage(
+            jobId,
+            JobState.SUSPENDED,
+            MessageFormat.format(messages.jobs.instanceShutdown, message)
+        )
+    }
+
+    /**
+     * A shortcut function for sending job instance restart message
+     */
+    fun sendInstanceRestartedMessage(jobId: String, message: String) {
+        sendJobStatusMessage(
+            jobId,
+            JobState.RUNNING,
+            MessageFormat.format(messages.jobs.instanceRestarted, message)
+        )
+    }
+
+    /**
      * This sends a JobsControlUpdateRequest to ucloud.
      * @property jobId the ucloud jobid
      * @property state the ucloud JobState the job should have
@@ -878,7 +900,7 @@ class OpenStackService(
             val instance = getInstanceFromId(server.id)
             if (instance != null && instance.status == Server.Status.SHUTOFF) {
                 logger.info("Found instance with status SHUTOFF: ", instance.id)
-                sendJobStatusMessage(job.id, JobState.SUSPENDED, "Instance stopped")
+                sendInstanceShutdownMessage(job.id, "Instance stopped")
                 return
             } else if (instance == null) {
                 logger.info("Instance stopping could not find instance: ", server.id)
@@ -915,7 +937,7 @@ class OpenStackService(
             val instance = getInstanceFromId(server.id)
             if (instance != null && instance.status == Server.Status.ACTIVE) {
                 logger.info("Found instance with status ACTIVE: ", instance.id)
-                sendJobStatusMessage(job.id, JobState.RUNNING, "Instance started")
+                sendInstanceRestartedMessage(job.id, "Instance started")
                 return
             } else if (instance == null) {
                 logger.info("Instance starting could not find instance: ", server.id)
