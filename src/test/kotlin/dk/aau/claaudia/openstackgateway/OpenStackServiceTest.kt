@@ -53,7 +53,10 @@ import java.time.temporal.ChronoUnit
 )
 @ContextConfiguration(initializers = [ConfigDataApplicationContextInitializer::class])
 @EnableConfigurationProperties(value = [OpenStackProperties::class, ProviderProperties::class, Messages::class])
-class OpenStackServiceTest {
+class OpenStackServiceTest(
+    @Autowired
+    private var messages: Messages
+) {
 
     @MockkBean
     private lateinit var templateService: TemplateService
@@ -63,9 +66,6 @@ class OpenStackServiceTest {
 
     @SpykBean
     private lateinit var openStackService: OpenStackService
-
-    @Autowired
-    private lateinit var messages: Messages
 
     private var mapper: ObjectMapper = ObjectMapper()
 
