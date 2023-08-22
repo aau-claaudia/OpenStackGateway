@@ -155,7 +155,7 @@ class OpenStackService(
     }
 
     fun getFlavorByName(name: String?): Flavor? {
-        val flavor = getClient().compute().flavors().list().first { it.name == name }
+        val flavor = getClient().compute().flavors().list().firstOrNull { it.name == name }
         logger.info("flavor by name: $flavor")
         return flavor
     }
@@ -813,7 +813,7 @@ class OpenStackService(
      */
     fun getLastChargedFromStack(stack: Stack): Instant {
         val prefix = "lastcharged:"
-        val lastCharged = stack.tags?.first { it.contains(prefix) }?.removePrefix(prefix)
+        val lastCharged = stack.tags?.firstOrNull { it.contains(prefix) }?.removePrefix(prefix)
 
         return if (lastCharged.isNullOrBlank()) {
             Instant.parse(stack.creationTime)
@@ -1159,7 +1159,7 @@ class OpenStackService(
         val client = getClient()
 
         val resources = client.heat().resources().list(stack.id)
-        val serverResource = resources.first { x -> x.resourceName.equals("server") }
+        val serverResource = resources.firstOrNull { x -> x.resourceName.equals("server") } ?: return null
 
         return client.compute().servers().get(serverResource.physicalResourceId)
     }
