@@ -11,12 +11,14 @@ import dk.aau.claaudia.openstackgateway.extensions.ucloudId
 import dk.aau.claaudia.openstackgateway.models.InstanceStatus
 import dk.aau.claaudia.openstackgateway.models.StackStatus
 import dk.sdu.cloud.CommonErrorMessage
+import dk.sdu.cloud.FindByStringId
 import dk.sdu.cloud.PageV2
 import dk.sdu.cloud.accounting.api.Product
 import dk.sdu.cloud.accounting.api.ProductPriceUnit
 import dk.sdu.cloud.accounting.api.ProductReference
 import dk.sdu.cloud.accounting.api.providers.ResourceBrowseRequest
 import dk.sdu.cloud.accounting.api.providers.ResourceChargeCredits
+import dk.sdu.cloud.accounting.api.providers.ResourceChargeCreditsResponse
 import dk.sdu.cloud.accounting.api.providers.ResourceRetrieveRequest
 import dk.sdu.cloud.app.orchestrator.api.*
 import dk.sdu.cloud.app.store.api.AppParameterValue
@@ -26,6 +28,9 @@ import dk.sdu.cloud.calls.client.orThrow
 import dk.sdu.cloud.provider.api.ResourceUpdateAndId
 import dk.sdu.cloud.providers.UCloudClient
 import dk.sdu.cloud.providers.call
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.openstack4j.api.Builders
 import org.openstack4j.api.OSClient.OSClientV3
 import org.openstack4j.model.common.Identifier
@@ -42,12 +47,14 @@ import org.openstack4j.model.network.SecurityGroup
 import org.openstack4j.model.storage.block.Volume
 import org.openstack4j.model.storage.block.VolumeAttachment
 import org.openstack4j.openstack.OSFactory
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import java.text.MessageFormat
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -67,6 +74,7 @@ class OpenStackService(
     private fun Token.hasExpired(): Boolean = expires.before(Date())
 
     private val threadPool: ExecutorService = Executors.newFixedThreadPool(10)
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 
     fun monitorThreads() {
         logger.info("Monitor threads:")
@@ -89,7 +97,6 @@ class OpenStackService(
      */
     private fun getClient(): OSClientV3 {
         if (token?.hasExpired() == false) {
-            logger.info("Using existing openstack token")
             return OSFactory.clientFromToken(token)
         } else {
             logger.info("Getting new openstack token")
@@ -132,8 +139,8 @@ class OpenStackService(
     }
 
     fun listFlavors(): List<Flavor?> {
-        val list = getClient().compute().flavors().list()
-        logger.info("list flavors:", list)
+        val list = getClient().compute().flavors().list(true)
+        logger.info("Getting flavors from openstack:", list.size)
         return list
     }
 
@@ -148,11 +155,12 @@ class OpenStackService(
     }
 
     fun getFlavorByName(name: String?): Flavor? {
-        val flavor = getClient().compute().flavors().list().first { it.name == name }
+        val flavor = getClient().compute().flavors().list().firstOrNull { it.name == name }
         logger.info("flavor by name: $flavor")
         return flavor
     }
 
+    @Cacheable("products")
     fun retrieveProducts(): List<ComputeSupport> {
         return listFlavors().filterNotNull().map { flavor ->
             ComputeSupport(
@@ -497,6 +505,28 @@ class OpenStackService(
     }
 
     /**
+     * A shortcut function for sending job instance shutdown message
+     */
+    fun sendInstanceShutdownMessage(jobId: String) {
+        sendJobStatusMessage(
+            jobId,
+            JobState.SUSPENDED,
+            messages.jobs.instanceShutdown
+        )
+    }
+
+    /**
+     * A shortcut function for sending job instance restart message
+     */
+    fun sendInstanceRestartedMessage(jobId: String) {
+        sendJobStatusMessage(
+            jobId,
+            JobState.RUNNING,
+            messages.jobs.instanceRestarted
+        )
+    }
+
+    /**
      * This sends a JobsControlUpdateRequest to ucloud.
      * @property jobId the ucloud jobid
      * @property state the ucloud JobState the job should have
@@ -516,23 +546,24 @@ class OpenStackService(
         ).orThrow()
     }
 
-    /**
-     * For each stack in openstack, charge the corresponding job in ucloud.
-     */
-    fun chargeAllStacks() {
+    fun getActiveStacks(): List<Stack> {
         val client = getClient()
 
-        val activeStacks = client.heat().stacks().list().filter {
+        return client.heat().stacks().list().filter {
             it.status in listOf(
                 StackStatus.CREATE_COMPLETE.name,
                 StackStatus.UPDATE_COMPLETE.name,
                 StackStatus.UPDATE_FAILED.name,
-                StackStatus.RESUME_COMPLETE
+                StackStatus.RESUME_COMPLETE.name
             )
         }
-        logger.info("list: ${activeStacks.size}")
+    }
 
-        activeStacks.forEach {
+    /**
+     * For each stack in openstack, charge the corresponding job in ucloud.
+     */
+    fun chargeAllStacks() {
+        getActiveStacks().forEach {
             asyncChargeJob(it)
         }
     }
@@ -545,6 +576,117 @@ class OpenStackService(
             chargeStack(stack)
             return@execute
         }
+    }
+
+    fun retrieveUcloudJob(ucloudId: String): Job? {
+        val response: IngoingCallResponse<Job, CommonErrorMessage> = JobsControl.retrieve.call(
+            ResourceRetrieveRequest(
+                JobIncludeFlags(includeProduct = true),
+                ucloudId
+            ),
+            uCloudClient
+        )
+
+        if (response is IngoingCallResponse.Ok) {
+            return response.result
+        } else {
+            // Handle backwards compatibility
+            // Ucloud changed their ids for jobs but the
+            logger.info("Couldn't find ucloud job by id. Trying old providerId. UcloudId: $ucloudId")
+            val jobs: PageV2<Job> = JobsControl.browse.call(
+                ResourceBrowseRequest(
+                    JobIncludeFlags(
+                        filterProviderIds = ucloudId,
+                        includeProduct = true
+                    )
+                ),
+                uCloudClient
+            ).orThrow()
+            if (jobs.items.isNotEmpty()) {
+                logger.info("Found job in UCloud from old providerId. stackUCloudId: $ucloudId: UCloudid: ${jobs.items.first().id}")
+                return jobs.items.first()
+            } else {
+                logger.info("Couldn't find ucloud job from old providerId. UcloudId: $ucloudId")
+            }
+        }
+        return null
+    }
+
+    fun checkCreditsJob(
+        jobId: String,
+        lastChargedTime: String,
+        cpuCores: Long,
+        period: Long
+    ): ResourceChargeCreditsResponse {
+        return JobsControl.checkCredits.call(
+            BulkRequest(
+                listOf(
+                    ResourceChargeCredits(
+                        jobId,
+                        lastChargedTime,
+                        cpuCores,
+                        period
+                    )
+                )
+            ),
+            uCloudClient
+        ).orThrow()
+    }
+
+    fun chargeCreditsJob(
+        jobId: String,
+        lastChargedTime: String,
+        cpuCores: Long,
+        period: Long
+    ): ResourceChargeCreditsResponse {
+        // Units is the number of cores
+        // Period is the time spent.
+        //   - This is counted in minutes/hours or days depending on the products unitOfPrice
+        return JobsControl.chargeCredits.call(
+            BulkRequest(
+                listOf(
+                    ResourceChargeCredits(
+                        jobId,
+                        lastChargedTime,
+                        cpuCores,
+                        period
+                    )
+                )
+            ),
+            uCloudClient
+        ).orThrow()
+    }
+
+    fun calculatePeriodAndNewChargeTimeForProduct(product: Product, stack: Stack): Pair<Long, Instant> {
+        val chargeTime: Instant = Instant.now()
+        val lastChargedTime: Instant = getLastChargedFromStack(stack)
+        val duration = Duration.between(lastChargedTime, chargeTime)
+
+        val period: Long
+        val newChargeTime: Instant
+        when (product.unitOfPrice) {
+            in arrayOf(
+                ProductPriceUnit.CREDITS_PER_HOUR,
+                ProductPriceUnit.UNITS_PER_HOUR
+            ) -> {
+                period = duration.toHours()
+                newChargeTime = lastChargedTime.plus(period, ChronoUnit.HOURS)
+            }
+
+            in arrayOf(
+                ProductPriceUnit.CREDITS_PER_MINUTE,
+                ProductPriceUnit.UNITS_PER_MINUTE
+            ) -> {
+                period = duration.toMinutes()
+                newChargeTime = lastChargedTime.plus(period, ChronoUnit.MINUTES)
+            }
+
+            else -> {
+                logger.error("ProductUnitOfPrice is not hours or minutes: ${product.unitOfPrice}")
+                throw Exception("ProductUnitOfPrice is not hours or minutes: ${product.unitOfPrice}")
+            }
+        }
+        return Pair(period, newChargeTime)
     }
 
     /**
@@ -562,121 +704,104 @@ class OpenStackService(
      * @property stack the stack to charge
      */
     fun chargeStack(stack: Stack) {
-        val job: Job?
-        // Try to find the UCloud job using the stack name
-        val jobRetrieve: IngoingCallResponse<Job, CommonErrorMessage> = JobsControl.retrieve.call(
-            ResourceRetrieveRequest(
-                JobIncludeFlags(includeProduct = true),
-                stack.ucloudId
-            ),
-            uCloudClient
-        )
+        // Get corresponding ucloud job
+        val job: Job? = retrieveUcloudJob(stack.ucloudId)
 
-        if (jobRetrieve is IngoingCallResponse.Ok) {
-            job = jobRetrieve.result
-        } else {
-            logger.info("Couldn't find ucloud job by id. Trying old providerId. UcloudId: ${stack.ucloudId}")
-            val jobs: PageV2<Job> = JobsControl.browse.call(
-                ResourceBrowseRequest(
-                    JobIncludeFlags(
-                        filterProviderIds = stack.ucloudId,
-                        includeProduct = true
-                    )
-                ),
-                uCloudClient
-            ).orThrow()
-            if (jobs.items.size == 1) {
-                job = jobs.items.first()
-                logger.info("Found job in UCloud from old providerId. stackUCloudId: ${stack.ucloudId}: UCloudid: ${job.id}")
-            } else {
-                logger.error("Could not charge job. Could not find job in UCloud: ${stack.ucloudId}")
-                return
-            }
+        // No charge if ucloud job not found
+        if (job == null) {
+            logger.error("Could not charge job. Could not find job in UCloud: ${stack.ucloudId}")
+            return
         }
 
-        logger.info("Charge. Found ucloud job with id: ${job.id} Owner: ${job.owner.createdBy}")
-
-        val chargeTime: Instant = Instant.now()
-        val lastChargedTime: Instant = getLastChargedFromStack(stack)
-
-        val duration = Duration.between(lastChargedTime, chargeTime)
+        // No charge If stack instance is shelved
+        val instance = getInstanceFromStack(stack)
+        if (instance == null) {
+            logger.error("Instance not found: ${stack.name}")
+            return
+        }
 
         val product: Product.Compute? = job.status.resolvedProduct
-
+        // No charge if product not found
         if (product == null) {
             logger.error("Could not charge job. Job had not resolved product. UcloudId: ${stack.ucloudId}")
             return
         }
 
         val cpuCores: Int? = product.cpu
-
+        // No charge if cpucores not found
         if (cpuCores == null) {
             logger.error("Could not charge job. Product had no cpu count. UcloudId: ${stack.ucloudId}")
             return
         }
 
-        //        Units is the number of cores cores
-        //        Period is the time spent.
-        //        - This is counted in minutes/hours or days depending on the products unitOfPrice
+        val (period, newChargeTime) = calculatePeriodAndNewChargeTimeForProduct(product, stack)
 
-        var period: Long = 0
-        if (product.unitOfPrice in arrayOf(
-                ProductPriceUnit.CREDITS_PER_HOUR,
-                ProductPriceUnit.UNITS_PER_HOUR)) {
-            period = duration.toHours()
-            if (period == 0L) {
-                logger.error("It makes no sense to charge zero hours. UcloudId: ${stack.ucloudId}")
-                return
-            }
-        } else if (product.unitOfPrice in arrayOf(
-                ProductPriceUnit.CREDITS_PER_MINUTE,
-                ProductPriceUnit.UNITS_PER_MINUTE
-            )
-        ) {
-            period = duration.toMinutes()
-            if (period == 0L) {
-                logger.error("It makes no sense to charge zero minutes. UcloudId: ${stack.ucloudId}")
-                return
-            }
-        }
-
-        // No charge If stack instance is shelved
-        val instance = getInstanceFromStack(stack)
-        if (instance?.status?.name == InstanceStatus.SHELVED_OFFLOADED.name) {
+        if (instance.status == Server.Status.SHELVED_OFFLOADED) {
             logger.info("Instance is SHELVED. Stack ${stack.name}. ucloud job was not charged for $cpuCores cores for period $period")
-            updateStackLastCharged(stack, chargeTime)
+            updateStackLastCharged(stack, newChargeTime)
             return
         }
 
-        logger.info("Will now charge: ${job.id} ${product.unitOfPrice} $lastChargedTime ${cpuCores.toLong()} $period")
-        val response = JobsControl.chargeCredits.call(
-            BulkRequest(
-                listOf(
-                    ResourceChargeCredits(
-                        job.id,
-                        lastChargedTime.toString(), // Er chargedate okay som chargeId
-                        cpuCores.toLong(),
-                        period
-                    )
-                )
-            ),
-            uCloudClient
-        ).orThrow()
-
-        if (response.duplicateCharges.isEmpty() && response.insufficientFunds.isEmpty()) {
-            // Everything is good
-            logger.info("Stack ${stack.name}. ucloud job was charged for $cpuCores cores for period $period. $response")
-            updateStackLastCharged(stack, chargeTime)
-        } else if (response.insufficientFunds.isNotEmpty()) {
-            // Insufficient funds
-            logger.info("Stack ${stack.name}. ucloud job has insufficient funds. $response")
-            // TODO Shelve job here?
-        } else if (response.duplicateCharges.isNotEmpty()) {
-            // Duplicate charges
-            logger.info("Stack ${stack.name}. ucloud job duplicate charges. $response")
-            updateStackLastCharged(stack, chargeTime)
+        // No charge if period is zero or below
+        if (period <= 0L) {
+            logger.error("Period: $period Dont charge zero or negative hours/minutes. UcloudId: ${stack.ucloudId}")
+            return
         }
-        logger.info("Charge response:", response)
+
+        // verify job has enough credits to charge. Stop job if insufficient funds
+        logger.info("Will now check credits: ${job.id} ${product.unitOfPrice} ${getLastChargedFromStack(stack)} ${cpuCores.toLong()} $period")
+        val checkResponse =
+            checkCreditsJob(job.id, getLastChargedFromStack(stack).toString(), cpuCores.toLong(), period)
+        val insufficientFunds =
+            checkResponse.insufficientFunds.isNotEmpty() && checkResponse.insufficientFunds.contains(FindByStringId(job.id))
+
+        if (insufficientFunds) {
+            if (instance.status != Server.Status.SHUTOFF) {
+                // Shut down stack instance and monitor status then send update to ucloud
+                logger.info("Stack ${stack.name}. Server status: ${instance.status}. ucloud job has insufficient funds and will be stopped. $checkResponse")
+                sendInstanceShutdownAction(instance)
+                asyncMonitorShutdownInstanceSendUpdate(instance, job)
+            } else {
+                logger.info("Instance is SHUTOFF and out of funds. Stack ${stack.name}. ucloud job was not charged for $cpuCores cores for period $period")
+            }
+            return
+        }
+
+        // Charging can be done, start machine if not running
+
+        if (instance.status == Server.Status.SHUTOFF) {
+            // Server is shutoff but charging can be done again. Restart the server and continue charging
+            logger.info("Stack ${stack.name}. Server status: ${instance.status}. ucloud job can charge, starting instance . $checkResponse")
+            sendInstanceStartAction(instance)
+            asyncMonitorStartInstanceSendUpdate(instance, job)
+        }
+
+        // When we arrive here, the instance is active (or starting) and the job can be charged in ucloud.
+        logger.info("Will now charge: ${job.id} ${product.unitOfPrice} ${getLastChargedFromStack(stack)} ${cpuCores.toLong()} $period")
+        chargeJob(job, stack, instance, period, cpuCores, newChargeTime)
+
+    }
+
+    fun chargeJob(job: Job, stack: Stack, instance: Server, period: Long, cpuCores: Int, newChargeTime: Instant) {
+        val chargeResponse =
+            chargeCreditsJob(job.id, getLastChargedFromStack(stack).toString(), cpuCores.toLong(), period)
+
+        if (chargeResponse.insufficientFunds.isNotEmpty()) {
+            logger.info("Stack ${stack.name}. ucloud job has insufficient funds and will be stopped. $chargeResponse")
+            // Shut down stack instance and monitor status then send update to ucloud.
+            // I know this was verified above in the checkCredits
+            sendInstanceShutdownAction(instance)
+            asyncMonitorShutdownInstanceSendUpdate(instance, job)
+        } else if (chargeResponse.duplicateCharges.isNotEmpty()) {
+            // Duplicate charges
+            logger.info("Stack ${stack.name}. ucloud job duplicate charges. $chargeResponse")
+        } else {
+            // Everything is good
+            logger.info("Stack ${stack.name}. ucloud job was charged for $cpuCores cores for period $period. $chargeResponse")
+
+            updateStackLastCharged(stack, newChargeTime)
+        }
+        logger.info("Charge response: $chargeResponse")
     }
 
     /**
@@ -687,10 +812,8 @@ class OpenStackService(
      * If timestamp not found, return creation timestamp from stack
      */
     fun getLastChargedFromStack(stack: Stack): Instant {
-        // TODO Consider storing lastcharged in database not openstack tags
-
         val prefix = "lastcharged:"
-        val lastCharged = stack.tags?.first { it.contains(prefix) }?.removePrefix(prefix)
+        val lastCharged = stack.tags?.firstOrNull { it.contains(prefix) }?.removePrefix(prefix)
 
         return if (lastCharged.isNullOrBlank()) {
             Instant.parse(stack.creationTime)
@@ -714,7 +837,6 @@ class OpenStackService(
         // FIXME Store in database not openstack tags
         // Alternatively: Store on metadata on instance
 
-
         //Get the stack with all details.
         //When stack is retrieved from list it doesn't have parameters
         val client = getClient()
@@ -723,6 +845,8 @@ class OpenStackService(
             logger.error("Could not update lastcharged. Stack not found: $listStack.name")
             return false
         }
+
+        logger.info("[Charge] Timestamped from ${getLastChargedFromStack(stack)} to $chargedAt")
 
         val templateAsMap = client.heat().templates().getTemplateAsMap(stack.name)
         val jsonStr = jacksonObjectMapper().writeValueAsString(templateAsMap)
@@ -746,6 +870,85 @@ class OpenStackService(
         }
 
         return update.isSuccess
+    }
+
+    fun sendInstanceShutdownAction(server: Server) {
+        val client = getClient()
+        logger.info("Sending STOP signal to server ${server.id}")
+        client.compute().servers().action(server.id, Action.STOP)
+    }
+
+    fun asyncMonitorShutdownInstanceSendUpdate(server: Server, job: Job) {
+        scope.launch {
+            try {
+                monitorShutdownInstanceSendUpdate(server, job)
+            } catch (e: Exception) {
+                logger.error("Exception in asyncMonitorShutdownInstanceSendUpdate coroutine", e)
+            }
+        }
+    }
+
+    fun getInstanceFromId(id: String): Server? {
+        val client = getClient()
+        return client.compute().servers().get(id)
+    }
+
+    fun monitorShutdownInstanceSendUpdate(server: Server, job: Job) {
+        val startTime = System.currentTimeMillis()
+
+        while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
+            val instance = getInstanceFromId(server.id)
+            if (instance != null && instance.status == Server.Status.SHUTOFF) {
+                logger.info("Found instance with status SHUTOFF: ", instance.id)
+                sendInstanceShutdownMessage(job.id)
+                return
+            } else if (instance == null) {
+                logger.info("Instance stopping could not find instance: ", server.id)
+            } else {
+                logger.info("Instance stopping could not be verified. Status: ", server.status)
+            }
+            // Sleep until next retry
+            logger.info("Waiting to retry")
+            Thread.sleep(config.monitor.delay)
+        }
+        logger.error("Instance could no be stopped. Serverid: ", server.id)
+    }
+
+    fun sendInstanceStartAction(server: Server) {
+        val client = getClient()
+        logger.info("Sending START signal to server ${server.id}")
+        client.compute().servers().action(server.id, Action.START)
+    }
+
+    fun asyncMonitorStartInstanceSendUpdate(server: Server, job: Job) {
+        scope.launch {
+            try {
+                monitorStartInstanceSendUpdate(server, job)
+            } catch (e: Exception) {
+                logger.error("Exception in asyncMonitorStartInstanceSendUpdate coroutine", e)
+            }
+        }
+    }
+
+    fun monitorStartInstanceSendUpdate(server: Server, job: Job) {
+        val startTime = System.currentTimeMillis()
+
+        while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
+            val instance = getInstanceFromId(server.id)
+            if (instance != null && instance.status == Server.Status.ACTIVE) {
+                logger.info("Found instance with status ACTIVE: ", instance.id)
+                sendInstanceRestartedMessage(job.id)
+                return
+            } else if (instance == null) {
+                logger.info("Instance starting could not find instance: ", server.id)
+            } else {
+                logger.info("Instance starting could not be verified. Status: ", server.status)
+            }
+            // Sleep until next retry
+            logger.info("Waiting to retry")
+            Thread.sleep(config.monitor.delay)
+        }
+        logger.error("Instance could no be started within timeout. Serverid: ", server.id)
     }
 
     fun getStackEvents(stackName: String, stackIdentity: String): MutableList<out Event>? {
@@ -791,7 +994,7 @@ class OpenStackService(
             if (!delete.isSuccess) {
                 logger.error("Stack deletion request was unsuccessful ${stackByName.name}")
             } else {
-                logger.error("Stack deletion request was successful ${stackByName.name}")
+                logger.info("Stack deletion request was successful ${stackByName.name}")
             }
         } else {
             logger.info("Stack not found with name: ${job.openstackName}")
@@ -913,32 +1116,41 @@ class OpenStackService(
             return
         }
 
-        // Move this to config?
-        val statusMappings = mapOf(
-            StackStatus.CREATE_COMPLETE to JobState.RUNNING,
-            StackStatus.UPDATE_COMPLETE to JobState.RUNNING,
-            StackStatus.CREATE_IN_PROGRESS to JobState.IN_QUEUE,
-            StackStatus.CREATE_FAILED to JobState.FAILURE
-        )
-
-        val expectedJobState = statusMappings[StackStatus.valueOf(stack.status)]
+        val instance = getInstanceFromStack(stack)
+        var expectedUcloudJobState: JobState? = null
 
         when {
-            expectedJobState == null -> {
-                // StatusMappings should be expanded to avoid this
-                logger.info("Unhandled status: ${stack.status}. JobID: ${job.id}. Stack: ${stack.id}")
-                sendJobStatusMessage(
-                    job.id, JobState.RUNNING,
-                    "ERROR, Unknown status: ${job.status.state.name}"
-                )
+            StackStatus.valueOf(stack.status) in listOf(StackStatus.CREATE_COMPLETE, StackStatus.UPDATE_COMPLETE) -> {
+                expectedUcloudJobState = if (instance?.status == Server.Status.SHUTOFF) {
+                    JobState.SUSPENDED
+                } else {
+                    JobState.RUNNING
+                }
             }
-            job.status.state != expectedJobState -> {
+
+            StackStatus.valueOf(stack.status) in listOf(StackStatus.CREATE_IN_PROGRESS) -> {
+                expectedUcloudJobState = JobState.IN_QUEUE
+            }
+
+            StackStatus.valueOf(stack.status) in listOf(StackStatus.CREATE_FAILED) -> {
+                expectedUcloudJobState = JobState.FAILURE
+            }
+
+        }
+
+        when {
+            expectedUcloudJobState == null -> {
+                // StatusMappings should be expanded to avoid this
+                logger.error("Unhandled status: ${stack.status}. JobID: ${job.id}. Stack: ${stack.id}")
+            }
+
+            job.status.state != expectedUcloudJobState -> {
                 // Status in ucloud is not as expected. Send update.
-                logger.info("Job status not as expected, updating ucloud: ${stack.status}. Job: ${job.id} stack ${stack.id}")
-                sendJobStatusMessage(job.id, expectedJobState, "Stack status: ${stack.status}")
+                logger.info("Updating status: Stack ${stack.id} ${stack.status}. Job ${job.id} ${job.status.state}")
+                sendJobStatusMessage(job.id, expectedUcloudJobState, "Stack status: ${stack.status}")
             }
             else -> {
-                logger.info("Status verified: ${stack.status} jobid ${job.id} stack ${stack.id}")
+                logger.info("Status verified: Stack ${stack.id} ${stack.status}. Job ${job.id} ${job.status.state}")
             }
         }
     }
@@ -947,7 +1159,7 @@ class OpenStackService(
         val client = getClient()
 
         val resources = client.heat().resources().list(stack.id)
-        val serverResource = resources.first { x -> x.resourceName.equals("server") }
+        val serverResource = resources.firstOrNull { x -> x.resourceName.equals("server") } ?: return null
 
         return client.compute().servers().get(serverResource.physicalResourceId)
     }
@@ -1009,6 +1221,30 @@ class OpenStackService(
         logger.info("Found ${failedStacks.size} that should be deleted")
         for (failedStack in failedStacks) {
             logger.info("Stack: ${failedStack.id} - ${failedStack.stackStatusReason}")
+        }
+    }
+
+    fun deleteNotChargedStacks() {
+        // Delete all stacks that have not been charged for a period and their instance is shut off
+
+        for (activeStack in getActiveStacks()) {
+            val lastCharged = getLastChargedFromStack(activeStack)
+            val sinceLastCharge = Duration.between(lastCharged, Instant.now())
+            val instance = getInstanceFromStack(activeStack)
+            val isShutoff = instance?.status == Server.Status.SHUTOFF
+
+            if (isShutoff && sinceLastCharge.toDays() >= config.janitor.deleteShutoffInstanceAfterDays) {
+                val job: Job? = retrieveUcloudJob(activeStack.ucloudId)
+
+                if (job == null) {
+                    logger.error("Could not delete not charged job. Could not find job in UCloud: ${activeStack.ucloudId}")
+                    return
+                }
+
+                logger.info("Deleting stack with shutoff instance ${activeStack.id} $lastCharged, $isShutoff ${sinceLastCharge.toDays()}")
+                deleteJob(job)
+                asyncMonitorDeletions(listOf(job))
+            }
         }
     }
 
