@@ -211,7 +211,7 @@ class OpenStackService(
      *
      * The stack name is the ucloud id prefixed based on config.
      */
-    fun getStackByJob(job: Job): Stack? {
+    fun getStackByJob(job: Job, includeDeleted: Boolean = false): Stack? {
         val client = getClient()
         // UCloud have changed the JobIds from UUIDs to integers.
         // The old Id should still be on the job and is used to retrieve the stack
@@ -224,6 +224,14 @@ class OpenStackService(
                 logger.info("Found: ${oldIdStack.name}")
                 return oldIdStack
             }
+
+            if (includeDeleted) {
+                //Try to find the deleted stack from name
+                return client.heat().stacks().list(
+                    mapOf("show_deleted" to "true", "name" to job.openstackName)
+                ).first()
+            }
+
         }
         return newIdStack
     }
@@ -1105,11 +1113,10 @@ class OpenStackService(
      * Verify a jobs status matches the status of the corresponding stack in openstack
      * If no stack found in openstack, assume deleted and send status update to ucloud
      *
-     * The function contains a map statusMappings that maps the openstack statuses to the ucloud job statuses
-     * If the stack status is different than the expected send an status update to ucloud.
+     * If the stack status is different from expected send status update to ucloud.
      */
     fun verifyJob(job: Job) {
-        val stack = getStackByJob(job)
+        val stack = getStackByJob(job, includeDeleted = true)
 
         if (stack == null) {
             logger.info("Could not find stack with jobid ${job.id}. Assume nothing.")
@@ -1128,19 +1135,18 @@ class OpenStackService(
                 }
             }
 
-            StackStatus.valueOf(stack.status) in listOf(StackStatus.CREATE_IN_PROGRESS) -> {
+            StackStatus.valueOf(stack.status) == StackStatus.CREATE_IN_PROGRESS -> {
                 expectedUcloudJobState = JobState.IN_QUEUE
             }
 
-            StackStatus.valueOf(stack.status) in listOf(StackStatus.CREATE_FAILED) -> {
+            StackStatus.valueOf(stack.status) in listOf(StackStatus.CREATE_FAILED, StackStatus.DELETE_COMPLETE) -> {
                 expectedUcloudJobState = JobState.FAILURE
             }
-
         }
 
         when {
             expectedUcloudJobState == null -> {
-                // StatusMappings should be expanded to avoid this
+                // Unknown stack status.
                 logger.error("Unhandled status: ${stack.status}. JobID: ${job.id}. Stack: ${stack.id}")
             }
 
@@ -1207,20 +1213,25 @@ class OpenStackService(
     }
 
     fun removeFailedJobs() {
-        //TODO Finish implementing this
-        // For now, log failed jobs
         val client = getClient()
 
         val failedStacks = client.heat().stacks().list().filter {
             it.status in listOf(
                 StackStatus.CREATE_FAILED.name,
-                StackStatus.RESUME_FAILED.name,
                 StackStatus.DELETE_FAILED.name
             )
         }
-        logger.info("Found ${failedStacks.size} that should be deleted")
+
+        logger.info("Found ${failedStacks.size} that will be deleted")
         for (failedStack in failedStacks) {
-            logger.info("Stack: ${failedStack.id} - ${failedStack.stackStatusReason}")
+            val job: Job? = retrieveUcloudJob(failedStack.ucloudId)
+
+            // Delete stack and send update if job found
+            logger.info("Deleting stack: ${failedStack.id} - ${failedStack.stackStatusReason}")
+            client.heat().stacks().delete(failedStack.name, failedStack.id)
+            if (job != null) {
+                asyncMonitorDeletions(listOf(job))
+            }
         }
     }
 
