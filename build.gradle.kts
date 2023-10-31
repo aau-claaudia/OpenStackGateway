@@ -38,7 +38,7 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-webflux:2.6.7")
+    implementation("org.springframework.boot:spring-boot-starter-webflux:3.0.4")
     implementation("org.springframework.cloud:spring-cloud-starter-config:3.1.2")
     implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.1.2")
     implementation("com.auth0:java-jwt:3.19.1")
