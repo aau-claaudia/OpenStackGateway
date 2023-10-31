@@ -69,7 +69,7 @@ class OpenStackServiceTest(
 
     private var mapper: ObjectMapper = ObjectMapper()
 
-    fun getTestJob(): Job {
+    private fun getTestJob(jobState: JobState = JobState.IN_QUEUE): Job {
         return Job(
             "44",
             ResourceOwner("testmayn", "projekt1"),
@@ -86,7 +86,7 @@ class OpenStackServiceTest(
                 null
             ),
             JobStatus(
-                JobState.IN_QUEUE,
+                jobState,
                 null,
                 null,
                 null,
@@ -251,6 +251,19 @@ class OpenStackServiceTest(
             "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
             "stack_name": "ucloud-1234",
             "stack_status": "${StackStatus.DELETE_FAILED}"
+            }
+            """
+
+        return mapper.readValue(stackJson, HeatStack::class.java)
+    }
+
+    fun getStackCheckInProgress(): HeatStack {
+        val stackJson =
+            """
+            {
+            "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
+            "stack_name": "ucloud-1234",
+            "stack_status": "${StackStatus.CHECK_IN_PROGRESS}"
             }
             """
 
@@ -606,6 +619,94 @@ class OpenStackServiceTest(
 
         verify(exactly = 1) { openStackService.deleteJob(any()) }
         verify(exactly = 1) { openStackService.asyncMonitorDeletions(any()) }
+    }
+
+    @Test
+    fun `given in-queue job and create in progress stack verify will not send update`() {
+        val stack: Stack = getStackCreateInProgress()
+
+        val job: Job = getTestJob()
+        every { openStackService.retrieveUcloudJob(stack.ucloudId) } returns job
+        every { openStackService.getStackByJob(job, any()) } returns stack
+        every { openStackService.getInstanceFromStack(any()) } returns null
+        every { openStackService.sendJobStatusMessage(any(), any(), any()) } returns Unit
+
+        openStackService.verifyJob(job)
+
+        verify(exactly = 0) { openStackService.sendJobStatusMessage(any(), any(), any()) }
+    }
+
+    @Test
+    fun `given in-queue job and no stack stack verify will not send update`() {
+        val stack: Stack = getStackCreateInProgress()
+        val job: Job = getTestJob()
+        every { openStackService.retrieveUcloudJob(stack.ucloudId) } returns job
+        every { openStackService.getStackByJob(job, any()) } returns null
+
+        openStackService.verifyJob(job)
+
+        verify(exactly = 0) { openStackService.sendJobStatusMessage(any(), any(), any()) }
+    }
+
+    @Test
+    fun `given in-queue job and create complete stack verify will send running update`() {
+        val stack: Stack = getStackCreateComplete()
+
+        val job: Job = getTestJob()
+        every { openStackService.retrieveUcloudJob(stack.ucloudId) } returns job
+        every { openStackService.getStackByJob(job, any()) } returns stack
+        every { openStackService.getInstanceFromStack(any()) } returns null
+        every { openStackService.sendJobStatusMessage(any(), any(), any()) } returns Unit
+
+        openStackService.verifyJob(job)
+
+        verify(exactly = 1) { openStackService.sendJobStatusMessage(any(), JobState.RUNNING, any()) }
+    }
+
+    @Test
+    fun `given in-queue job and create complete stack verify will send failed update`() {
+        val stack: Stack = getStackCreateFailed()
+
+        val job: Job = getTestJob()
+        every { openStackService.retrieveUcloudJob(stack.ucloudId) } returns job
+        every { openStackService.getStackByJob(job, any()) } returns stack
+        every { openStackService.getInstanceFromStack(any()) } returns null
+        every { openStackService.sendJobStatusMessage(any(), any(), any()) } returns Unit
+
+        openStackService.verifyJob(job)
+
+        verify(exactly = 1) { openStackService.sendJobStatusMessage(any(), JobState.FAILURE, any()) }
+    }
+
+    @Test
+    fun `given running job and update complete stack with shutoff instance verify will send suspended update`() {
+        val stack: Stack = getStackUpdateComplete()
+
+        val job: Job = getTestJob(JobState.RUNNING)
+        every { openStackService.retrieveUcloudJob(stack.ucloudId) } returns job
+        every { openStackService.getStackByJob(job, any()) } returns stack
+        every { openStackService.getInstanceFromStack(any()) } returns getTestServerShutoff()
+        every { openStackService.sendJobStatusMessage(any(), any(), any()) } returns Unit
+
+        openStackService.verifyJob(job)
+
+        verify(exactly = 1) { openStackService.sendJobStatusMessage(any(), JobState.SUSPENDED, any()) }
+    }
+
+    @Test
+    fun `given running job and CHECK_IN_PROGRESS stack verify will send no update`() {
+        // This status is unknown to verify function
+        val stack: Stack = getStackCheckInProgress()
+
+        val job: Job = getTestJob(JobState.RUNNING)
+        every { openStackService.retrieveUcloudJob(stack.ucloudId) } returns job
+        every { openStackService.getStackByJob(job, any()) } returns stack
+        every { openStackService.getInstanceFromStack(any()) } returns null
+        every { openStackService.sendJobStatusMessage(any(), any(), any()) } returns Unit
+
+        openStackService.verifyJob(job)
+
+        verify(exactly = 0) { openStackService.sendJobStatusMessage(any(), any(), any()) }
     }
 
     @Test
