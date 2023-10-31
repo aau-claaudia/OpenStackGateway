@@ -12,6 +12,6 @@ RUN /home/gradle/gradlew dependencies && \
     # /home/gradle/gradlew dokkaGfm # FIXME this outputs somewhere mkdocs cannot find it?
 
 
-FROM openjdk:17-jdk-alpine
+FROM openjdk:18-jdk-alpine
 COPY --from=build /home/gradle/build/libs/gradle-0.0.1-SNAPSHOT.jar app.jar
 ENTRYPOINT ["java","-jar","/app.jar"]
