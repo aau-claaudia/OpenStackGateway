@@ -132,3 +132,6 @@ gradle-app.setting
 # End of https://www.toptal.com/developers/gitignore/api/kotlin,gradle,intellij+iml
 
 *application-local.yml
+*application-staging.yml
+*application-test.yml
+*application-test2.yml
