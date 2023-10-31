@@ -41,7 +41,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux:2.6.7")
     implementation("org.springframework.cloud:spring-cloud-starter-config:3.1.2")
     implementation("org.springframework.cloud:spring-cloud-starter-bootstrap:3.1.2")
-    implementation("com.auth0:java-jwt:3.19.1")
+    implementation("com.auth0:java-jwt:4.3.0")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
     implementation("org.springdoc:springdoc-openapi-ui:1.6.8")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
