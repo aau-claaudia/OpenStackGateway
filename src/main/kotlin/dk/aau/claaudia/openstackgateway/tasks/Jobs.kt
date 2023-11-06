@@ -36,11 +36,10 @@ class Jobs(private val openStackService: OpenStackService) {
     }
 
     /**
-     * TO BE IMPLEMENTED
-     * Should remove failed stack creations
+     * Remove failed stack creations
      * This task is started every hour.
      */
-    @Scheduled(cron = "0 0 * * * *")
+    @Scheduled(cron = "0 7 * * * *")
     fun cleanUpFailedStacks() {
         logger.info("Cleanup task is running")
         openStackService.removeFailedJobs()
