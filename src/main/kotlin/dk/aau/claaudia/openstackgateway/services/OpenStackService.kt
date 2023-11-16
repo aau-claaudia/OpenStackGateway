@@ -33,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.openstack4j.api.Builders
 import org.openstack4j.api.OSClient.OSClientV3
+import org.openstack4j.core.transport.Config
 import org.openstack4j.model.common.Identifier
 import org.openstack4j.model.compute.Action
 import org.openstack4j.model.compute.Flavor
@@ -96,12 +97,16 @@ class OpenStackService(
      * If the token has expired, authenticate to get a new one.
      */
     private fun getClient(): OSClientV3 {
+        val clientConfig = Config.newConfig()
+            .withConnectionTimeout(60000)
+            .withReadTimeout(60000)
         if (token?.hasExpired() == false) {
-            return OSFactory.clientFromToken(token)
+            return OSFactory.clientFromToken(token, clientConfig)
         } else {
             logger.info("Getting new openstack token")
             //Create and saving client for future use
             val client = OSFactory.builderV3()
+                .withConfig(clientConfig)
                 .endpoint(config.endpoints.auth)
                 .credentials(
                     config.username,
@@ -478,7 +483,7 @@ class OpenStackService(
                 return
             }
             if (stack != null && stack.status == StackStatus.CREATE_FAILED.name) {
-                logger.error("Stack create failed", job, stack)
+                logger.error("Stack create failed status: ${stack.status} stackId: ${stack.id} stackName: ${stack.name}")
                 sendJobFailedMessage(job.id, "Job failed. Reason: ${stack.stackStatusReason}")
                 return
             }
@@ -1227,7 +1232,7 @@ class OpenStackService(
             val job: Job? = retrieveUcloudJob(failedStack.ucloudId)
 
             // Delete stack and send update if job found
-            logger.info("Deleting stack: ${failedStack.id} - ${failedStack.stackStatusReason}")
+            logger.info("RemoveFailedJobs Deleting stack: ${failedStack.id} - ${failedStack.stackStatusReason}")
             client.heat().stacks().delete(failedStack.name, failedStack.id)
             if (job != null) {
                 asyncMonitorDeletions(listOf(job))
