@@ -10,6 +10,7 @@ data class Messages(var jobs: Jobs) {
         val createComplete: String,
         val createFailed: String,
         val instanceShutdown: String,
-        val instanceRestarted: String
+        val instanceRestarted: String,
+        val creditDeficit: String,
     )
 }

@@ -520,11 +520,11 @@ class OpenStackService(
     /**
      * A shortcut function for sending job instance shutdown message
      */
-    fun sendInstanceShutdownMessage(jobId: String) {
+    fun sendInstanceShutdownMessage(jobId: String, deficit: Double?) {
         sendJobStatusMessage(
             jobId,
             JobState.SUSPENDED,
-            messages.jobs.instanceShutdown
+            MessageFormat.format(messages.jobs.instanceShutdown, deficit)
         )
     }
 
@@ -773,7 +773,7 @@ class OpenStackService(
                 // Shut down stack instance and monitor status then send update to ucloud
                 logger.info("Stack ${stack.name}. Server status: ${instance.status}. ucloud job has insufficient funds and will be stopped. $checkResponse")
                 sendInstanceShutdownAction(instance)
-                asyncMonitorShutdownInstanceSendUpdate(instance, job)
+                asyncMonitorShutdownInstanceSendUpdate(instance, job, period)
             } else {
                 logger.info("Instance is SHUTOFF and out of funds. Stack ${stack.name}. ucloud job was not charged for $cpuCores cores for period $period")
             }
@@ -804,7 +804,7 @@ class OpenStackService(
             // Shut down stack instance and monitor status then send update to ucloud.
             // I know this was verified above in the checkCredits
             sendInstanceShutdownAction(instance)
-            asyncMonitorShutdownInstanceSendUpdate(instance, job)
+            asyncMonitorShutdownInstanceSendUpdate(instance, job, period)
         } else if (chargeResponse.duplicateCharges.isNotEmpty()) {
             // Duplicate charges
             logger.info("Stack ${stack.name}. ucloud job duplicate charges. $chargeResponse")
@@ -891,10 +891,10 @@ class OpenStackService(
         client.compute().servers().action(server.id, Action.STOP)
     }
 
-    fun asyncMonitorShutdownInstanceSendUpdate(server: Server, job: Job) {
+    fun asyncMonitorShutdownInstanceSendUpdate(server: Server, job: Job, period: Long) {
         scope.launch {
             try {
-                monitorShutdownInstanceSendUpdate(server, job)
+                monitorShutdownInstanceSendUpdate(server, job, period)
             } catch (e: Exception) {
                 logger.error("Exception in asyncMonitorShutdownInstanceSendUpdate coroutine", e)
             }
@@ -906,14 +906,14 @@ class OpenStackService(
         return client.compute().servers().get(id)
     }
 
-    fun monitorShutdownInstanceSendUpdate(server: Server, job: Job) {
+    fun monitorShutdownInstanceSendUpdate(server: Server, job: Job, period: Long) {
         val startTime = System.currentTimeMillis()
 
         while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
             val instance = getInstanceFromId(server.id)
             if (instance != null && instance.status == Server.Status.SHUTOFF) {
                 logger.info("Found instance with status SHUTOFF: ", instance.id)
-                sendInstanceShutdownMessage(job.id)
+                sendInstanceShutdownMessage(job.id, estimateProductPriceForPeriod(job, period))
                 return
             } else if (instance == null) {
                 logger.info("Instance stopping could not find instance: ", server.id)
@@ -1166,6 +1166,16 @@ class OpenStackService(
         }
     }
 
+    fun estimateProductPriceForPeriod(job: Job, period: Long): Double? {
+        val product: Product.Compute? = job.status.resolvedProduct
+        if (product == null) {
+            logger.error("Cannot estimate price for job, no resolvedProduct found. jobId: ${job.id}")
+        }
+
+        val priceForAllCpus = product?.cpu?.toLong()?.times(product.pricePerUnit)
+        return priceForAllCpus?.times(period)?.div(1000000.0)
+    }
+
     fun getInstanceFromStack(stack: Stack): Server? {
         val client = getClient()
 
@@ -1260,6 +1270,33 @@ class OpenStackService(
                 logger.info("Deleting stack with shutoff instance ${activeStack.id} $lastCharged, $isShutoff ${sinceLastCharge.toDays()}")
                 deleteJob(job)
                 asyncMonitorDeletions(listOf(job))
+            }
+        }
+    }
+
+    fun sendCreditDeficitUpdates() {
+        for (activeStack in getActiveStacks()) {
+            val lastCharged = getLastChargedFromStack(activeStack)
+            val sinceLastCharge = Duration.between(lastCharged, Instant.now())
+            val instance = getInstanceFromStack(activeStack)
+            val isShutoff = instance?.status == Server.Status.SHUTOFF
+
+            if (isShutoff) {
+                val job: Job? = retrieveUcloudJob(activeStack.ucloudId)
+
+                if (job == null) {
+                    logger.error("Could not send deficit update. Could not find job in UCloud: ${activeStack.ucloudId}")
+                    return
+                }
+
+                logger.info("Sending deficit update with shutoff instance ${activeStack.id} $lastCharged, $isShutoff ${sinceLastCharge.toDays()}")
+
+                val msg = MessageFormat.format(
+                    messages.jobs.creditDeficit,
+                    estimateProductPriceForPeriod(job, sinceLastCharge.toMinutes())
+                )
+
+                sendJobStatusMessage(job.id, JobState.SUSPENDED, msg)
             }
         }
     }
