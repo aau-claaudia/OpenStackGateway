@@ -39,6 +39,7 @@ import org.springframework.boot.test.context.ConfigDataApplicationContextInitial
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.junit.jupiter.SpringExtension
+import java.text.MessageFormat
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -69,7 +70,18 @@ class OpenStackServiceTest(
 
     private var mapper: ObjectMapper = ObjectMapper()
 
-    private fun getTestJob(jobState: JobState = JobState.IN_QUEUE): Job {
+    private fun getTestJob(
+        jobState: JobState = JobState.IN_QUEUE,
+        product: Product.Compute = Product.Compute(
+            description = "Some product",
+            name = "Product 42",
+            category = ProductCategoryId("standard", "aau-test"),
+            pricePerUnit = 3000000,
+            unitOfPrice = ProductPriceUnit.CREDITS_PER_MINUTE,
+            cpu = 4
+        ),
+    ): Job {
+
         return Job(
             "44",
             ResourceOwner("testmayn", "projekt1"),
@@ -92,14 +104,7 @@ class OpenStackServiceTest(
                 null,
                 null,
                 null,
-                Product.Compute(
-                    description = "Some product",
-                    name = "Product 42",
-                    category = ProductCategoryId("standard", "aau-test"),
-                    pricePerUnit = 1,
-                    unitOfPrice = ProductPriceUnit.CREDITS_PER_MINUTE,
-                    cpu = 4,
-                )
+                product
             ),
             getTimeMillis(),
             null,
@@ -492,14 +497,14 @@ class OpenStackServiceTest(
 
         //Mock shutdown methods
         every { openStackService.sendInstanceShutdownAction(any()) } returns Unit
-        every { openStackService.asyncMonitorShutdownInstanceSendUpdate(any(), any()) } returns Unit
+        every { openStackService.asyncMonitorShutdownInstanceSendUpdate(any(), any(), any()) } returns Unit
 
         openStackService.chargeStack(stack)
 
         //Thread.sleep(2000)
         // Verify shutdown and monitor is called
         verify(exactly = 1) { openStackService.sendInstanceShutdownAction(instance) }
-        verify(exactly = 1) { openStackService.asyncMonitorShutdownInstanceSendUpdate(instance, job) }
+        verify(exactly = 1) { openStackService.asyncMonitorShutdownInstanceSendUpdate(instance, job, any()) }
         verify(exactly = 0) { openStackService.updateStackLastCharged(stack, any()) }
     }
 
@@ -517,9 +522,15 @@ class OpenStackServiceTest(
         )
         every { openStackService.sendJobStatusMessage(job.id, JobState.SUSPENDED, any()) } returns Unit
 
-        openStackService.monitorShutdownInstanceSendUpdate(activeServer, job)
+        openStackService.monitorShutdownInstanceSendUpdate(activeServer, job, 60)
 
-        verify { openStackService.sendJobStatusMessage(job.id, JobState.SUSPENDED, messages.jobs.instanceShutdown) }
+        verify {
+            openStackService.sendJobStatusMessage(
+                job.id, JobState.SUSPENDED,
+                MessageFormat.format(messages.jobs.instanceShutdown, 720.0)
+            )
+        }
+
     }
 
     @Test
@@ -544,7 +555,7 @@ class OpenStackServiceTest(
 
         //Mock shutdown/resume methods
         every { openStackService.sendInstanceShutdownAction(any()) } returns Unit
-        every { openStackService.asyncMonitorShutdownInstanceSendUpdate(any(), any()) } returns Unit
+        every { openStackService.asyncMonitorShutdownInstanceSendUpdate(any(), any(), any()) } returns Unit
         every { openStackService.sendInstanceStartAction(any()) } returns Unit
         every { openStackService.asyncMonitorStartInstanceSendUpdate(any(), any()) } returns Unit
 
@@ -558,7 +569,7 @@ class OpenStackServiceTest(
         verify(exactly = 1) { openStackService.asyncMonitorStartInstanceSendUpdate(instance, job) }
         verify(exactly = 1) { openStackService.updateStackLastCharged(stack, any()) }
         verify(exactly = 0) { openStackService.sendInstanceShutdownAction(instance) }
-        verify(exactly = 0) { openStackService.asyncMonitorShutdownInstanceSendUpdate(instance, job) }
+        verify(exactly = 0) { openStackService.asyncMonitorShutdownInstanceSendUpdate(instance, job, any()) }
     }
 
     @Test
@@ -774,5 +785,47 @@ class OpenStackServiceTest(
 
         assertThat(retrievedProducts.get(3).product.id).isEqualTo("uc-general-small-h")
         assertThat(retrievedProducts.get(3).product.category).isEqualTo("uc-general-h")
+    }
+
+    @Test
+    fun `given job with price per minute estimate price for an hour`() {
+        val testJob = getTestJob()
+        assertThat(openStackService.estimateProductPriceForPeriod(testJob, 60)).isEqualTo(720.0)
+    }
+
+    @Test
+    fun `given job with price per minute estimate price for a period`() {
+        val testJob = getTestJob()
+        assertThat(openStackService.estimateProductPriceForPeriod(testJob, 42)).isEqualTo(504.0)
+    }
+
+    @Test
+    fun `given job with price per hour estimate price for an hour`() {
+        val product: Product.Compute = Product.Compute(
+            description = "Some product",
+            name = "Product 42",
+            category = ProductCategoryId("standard", "aau-test"),
+            pricePerUnit = 15000000,
+            unitOfPrice = ProductPriceUnit.CREDITS_PER_HOUR,
+            cpu = 4
+        )
+        val testJob = getTestJob(product = product)
+
+        assertThat(openStackService.estimateProductPriceForPeriod(testJob, 1)).isEqualTo(60.0)
+    }
+
+    @Test
+    fun `given job with price per hour estimate price for a day`() {
+        val product: Product.Compute = Product.Compute(
+            description = "Some product",
+            name = "Product 42",
+            category = ProductCategoryId("standard", "aau-test"),
+            pricePerUnit = 16000000,
+            unitOfPrice = ProductPriceUnit.CREDITS_PER_HOUR,
+            cpu = 4
+        )
+        val testJob = getTestJob(product = product)
+
+        assertThat(openStackService.estimateProductPriceForPeriod(testJob, 24)).isEqualTo(1536.0)
     }
 }

@@ -55,6 +55,16 @@ class Jobs(private val openStackService: OpenStackService) {
         openStackService.deleteNotChargedStacks()
     }
 
+    /**
+     * Sends an update about credit deficit to currently shutoff jobs
+     * This task is started every monday morning
+     */
+    @Scheduled(cron = "0 0 9 ? * MON")
+    fun sendCreditDeficitUpdates() {
+        logger.info("Send credit deficit updates task running")
+        openStackService.sendCreditDeficitUpdates()
+    }
+
     @CacheEvict(value = ["products"], allEntries = true)
     @Scheduled(cron = "0 0 3 * * *")
     fun emptyProductsCache() {
