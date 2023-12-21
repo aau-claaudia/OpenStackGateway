@@ -567,7 +567,8 @@ class OpenStackService(
                 StackStatus.CREATE_COMPLETE.name,
                 StackStatus.UPDATE_COMPLETE.name,
                 StackStatus.UPDATE_FAILED.name,
-                StackStatus.RESUME_COMPLETE.name
+                StackStatus.RESUME_COMPLETE.name,
+                StackStatus.CHECK_COMPLETE.name
             )
         }
     }
