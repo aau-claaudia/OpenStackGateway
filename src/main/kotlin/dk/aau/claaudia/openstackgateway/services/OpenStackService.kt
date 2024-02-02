@@ -242,6 +242,14 @@ class OpenStackService(
     }
 
     /**
+     * Wrapper function to make mocking possible in unit testing
+     */
+    fun getStackByName(stackName: String): Stack?{
+        val client = getClient()
+        return client.heat().stacks().getStackByName(stackName)
+    }
+
+    /**
      * Given a ucloud application name and version find the corresponding openstack image
      * Since ucloud uses name and version and not a unique name/id
      * we use this config mapping instead of a strict naming convention of images
@@ -1260,17 +1268,33 @@ class OpenStackService(
             val instance = getInstanceFromStack(activeStack)
             val isShutoff = instance?.status == Server.Status.SHUTOFF
 
-            if (isShutoff && sinceLastCharge.toDays() >= config.janitor.deleteShutoffInstanceAfterDays) {
-                val job: Job? = retrieveUcloudJob(activeStack.ucloudId)
-
-                if (job == null) {
-                    logger.error("Could not delete not charged job. Could not find job in UCloud: ${activeStack.ucloudId}")
-                    return
+            if (isShutoff) {
+                //When stack is retrieved from list it doesn't have parameters
+                val stackWithParameters = getStackByName(activeStack.name)
+                if (stackWithParameters == null) {
+                    logger.error("Could fetch stack details in deleteNotChargedStacks. Stack not found: $activeStack.name")
+                    continue
                 }
 
-                logger.info("Deleting stack with shutoff instance ${activeStack.id} $lastCharged, $isShutoff ${sinceLastCharge.toDays()}")
-                deleteJob(job)
-                asyncMonitorDeletions(listOf(job))
+                // See if any specific max lifetime exists for this flavor
+                val flavorLifetime = config.janitor.flavorLifetimes.find {
+                    it.flavorName == stackWithParameters.parameters["flavor"]
+                }
+                val maxLifetime = flavorLifetime?.lifetimeDays ?: config.janitor.deleteShutoffInstanceAfterDays
+
+                if (sinceLastCharge.toDays() >= maxLifetime) {
+                    val job: Job? = retrieveUcloudJob(activeStack.ucloudId)
+
+                    if (job == null) {
+                        logger.error("Could not delete not charged job. Could not find job in UCloud: ${activeStack.ucloudId}")
+                        return
+                    }
+
+                    logger.info("Deleting stack with shutoff instance ${activeStack.id} $lastCharged, $isShutoff ${sinceLastCharge.toDays()}")
+                    deleteJob(job)
+                    asyncMonitorDeletions(listOf(job))
+                }
+
             }
         }
     }

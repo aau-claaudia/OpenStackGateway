@@ -15,6 +15,11 @@ openstack:
     delay: 1
   janitor:
     deleteShutoffInstanceAfterDays: 30
+    flavor-lifetimes:
+      - flavor-name: uc-a100-1
+        lifetime-days: 3
+      - flavor-name: uc-a100-1-h
+        lifetime-days: 4
 
 ucloud:
   certificate: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjF1Hvr8J6lZK2h7Jm7HtV8r4m7H+pRFblvnAxEhWL4RFADxL+/e6+3IVYJbJVfxYC6joFW6UaaReZ0AVq0QMpFre4vFelIaQT1Bf31bFvV4KLLkiIhonwO5fEwHXBj6AXDWZJD18MLUHrR9JH0X2v0lwUOC5ptKSf+tR1fyMXYoj9dZ2QfSu9twZ7S5ik2AIgLpGbku3M2cOBpOPiuoJpqdE7ukSoxDVrDsNSCq1S8ka44hSnWBnox8vEDfaz3GYZ6B8NCtWhIhj4NgPHJ8FLkoec92u9cQmbk7Qeajbcfq39RKP/cKSyZhAN2qLtKpyVSlslCe/l8+3ZkMsw0VjTwIDAQAB
