@@ -3,4 +3,4 @@
 # Messages
 
 [jvm]\
-fun [Messages](-messages.md)(jobs: [Messages.Jobs](-jobs/index.md))
+constructor(jobs: [Messages.Jobs](-jobs/index.md))

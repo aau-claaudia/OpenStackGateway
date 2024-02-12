@@ -3,4 +3,4 @@
 # ExtensionConfig
 
 [jvm]\
-fun [ExtensionConfig](-extension-config.md)(openStackProperties: [OpenStackProperties](../../dk.aau.claaudia.openstackgateway.config/-open-stack-properties/index.md))
+constructor(openStackProperties: [OpenStackProperties](../../dk.aau.claaudia.openstackgateway.config/-open-stack-properties/index.md))

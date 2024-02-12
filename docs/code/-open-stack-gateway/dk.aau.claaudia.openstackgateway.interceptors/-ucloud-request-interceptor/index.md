@@ -7,6 +7,12 @@
 
 class [UcloudRequestInterceptor](index.md) : HandlerInterceptor
 
+## Constructors
+
+| | |
+|---|---|
+| [UcloudRequestInterceptor](-ucloud-request-interceptor.md) | [jvm]<br>constructor() |
+
 ## Types
 
 | Name | Summary |

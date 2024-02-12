@@ -3,4 +3,6 @@
 # getStackByName
 
 [jvm]\
-fun [getStackByName](get-stack-by-name.md)(name: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)): Stack?
+fun [getStackByName](get-stack-by-name.md)(stackName: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)): Stack?
+
+Wrapper function to make mocking possible in unit testing

@@ -3,4 +3,4 @@
 # UcloudRequestInterceptor
 
 [jvm]\
-fun [UcloudRequestInterceptor](-ucloud-request-interceptor.md)()
+constructor()

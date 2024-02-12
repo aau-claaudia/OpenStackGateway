@@ -3,4 +3,4 @@
 # TemplateService
 
 [jvm]\
-fun [TemplateService](-template-service.md)(@Qualifier(value = "YAMLMapper")mapper: ObjectMapper)
+constructor(@Qualifier(value = &quot;YAMLMapper&quot;)mapper: ObjectMapper)

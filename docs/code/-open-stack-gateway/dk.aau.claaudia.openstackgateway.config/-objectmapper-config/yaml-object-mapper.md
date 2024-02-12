@@ -4,6 +4,6 @@
 
 [jvm]\
 
-@Bean(name = ["YAMLMapper"])
+@Bean(name = [&quot;YAMLMapper&quot;])
 
 fun [yamlObjectMapper](yaml-object-mapper.md)(): ObjectMapper

@@ -3,4 +3,4 @@
 # ObjectmapperConfig
 
 [jvm]\
-fun [ObjectmapperConfig](-objectmapper-config.md)()
+constructor()

@@ -4,7 +4,7 @@
 
 [jvm]\
 
-@GetMapping(value = ["/"])
+@GetMapping(value = [&quot;/&quot;])
 
 fun [index](--index--.md)(): RedirectView?
 

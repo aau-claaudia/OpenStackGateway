@@ -3,4 +3,4 @@
 # OpenApiConfig
 
 [jvm]\
-fun [OpenApiConfig](-open-api-config.md)()
+constructor()

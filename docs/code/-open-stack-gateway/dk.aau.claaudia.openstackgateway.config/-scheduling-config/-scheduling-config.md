@@ -3,4 +3,4 @@
 # SchedulingConfig
 
 [jvm]\
-fun [SchedulingConfig](-scheduling-config.md)()
+constructor()

@@ -3,4 +3,4 @@
 # UCloudClientConfig
 
 [jvm]\
-fun [UCloudClientConfig](-u-cloud-client-config.md)()
+constructor()

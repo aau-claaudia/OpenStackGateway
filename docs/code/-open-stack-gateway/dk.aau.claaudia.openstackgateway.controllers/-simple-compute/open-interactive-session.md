@@ -3,4 +3,4 @@
 # openInteractiveSession
 
 [jvm]\
-open override fun [openInteractiveSession](open-interactive-session.md)(request: BulkRequest&lt;JobsProviderOpenInteractiveSessionRequestItem&gt;): JobsProviderOpenInteractiveSessionResponse
+open override fun [openInteractiveSession](open-interactive-session.md)(request: BulkRequest&lt;JobsProviderOpenInteractiveSessionRequestItem&gt;): BulkResponse&lt;OpenSession&gt;
