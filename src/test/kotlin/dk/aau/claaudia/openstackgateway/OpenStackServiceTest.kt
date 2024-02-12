@@ -210,6 +210,32 @@ class OpenStackServiceTest(
         return mapper.readValue(stackJson, HeatStack::class.java)
     }
 
+    fun getStackWithFlavorName(flavorName: String): HeatStack? {
+        val stackJson =
+            """
+            {
+                "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
+                "stack_name": "ucloud-1234",
+                "stack_status": "${StackStatus.UPDATE_COMPLETE}",
+                "creation_time": "2021-10-04T20:59:46Z",
+                "tags": ["lastcharged:2021-10-05T20:59:46Z"],
+                "outputs": [
+                    {
+                        "output_key": "server_ip",
+                        "output_value": "127.0.0.1"
+                    }
+                ],
+                "parameters": {
+                    "flavor": "$flavorName"
+                }
+                
+            }
+            """
+
+        return mapper.readValue(stackJson, HeatStack::class.java)
+
+    }
+
     fun getStackCreateFailed(): HeatStack {
         val stackJson =
             """
@@ -605,6 +631,7 @@ class OpenStackServiceTest(
         every { openStackService.getActiveStacks() } returns listOf(stack)
         every { openStackService.getInstanceFromStack(any()) } returns getTestServerShutoff()
         every { openStackService.retrieveUcloudJob(any()) } returns getTestJob()
+        every { openStackService.getStackByName(any()) } returns getStackWithFlavorName("uc-general-small")
 
         every { openStackService.deleteJob(any()) } returns Unit
         every { openStackService.asyncMonitorDeletions(any()) } returns Unit
@@ -622,6 +649,7 @@ class OpenStackServiceTest(
         every { openStackService.getActiveStacks() } returns listOf(stack)
         every { openStackService.getInstanceFromStack(any()) } returns getTestServerShutoff()
         every { openStackService.retrieveUcloudJob(any()) } returns getTestJob()
+        every { openStackService.getStackByName(any()) } returns getStackWithFlavorName("uc-general-small")
 
         every { openStackService.deleteJob(any()) } returns Unit
         every { openStackService.asyncMonitorDeletions(any()) } returns Unit
@@ -630,6 +658,42 @@ class OpenStackServiceTest(
 
         verify(exactly = 1) { openStackService.deleteJob(any()) }
         verify(exactly = 1) { openStackService.asyncMonitorDeletions(any()) }
+    }
+
+    @Test
+    fun `given shutoff instance with flavor rules above cleanup threshold verify deletion`() {
+        val stack = getStackUpdateCompleteWithLastCharged(Instant.now().minus(5, ChronoUnit.DAYS))
+
+        every { openStackService.getActiveStacks() } returns listOf(stack)
+        every { openStackService.getInstanceFromStack(any()) } returns getTestServerShutoff()
+        every { openStackService.retrieveUcloudJob(any()) } returns getTestJob()
+        every { openStackService.getStackByName(any()) } returns getStackWithFlavorName("uc-a100-1")
+
+        every { openStackService.deleteJob(any()) } returns Unit
+        every { openStackService.asyncMonitorDeletions(any()) } returns Unit
+
+        openStackService.deleteNotChargedStacks()
+
+        verify(exactly = 1) { openStackService.deleteJob(any()) }
+        verify(exactly = 1) { openStackService.asyncMonitorDeletions(any()) }
+    }
+
+    @Test
+    fun `given shutoff instance with flavor rules below cleanup threshold verify no deletion`() {
+        val stack = getStackUpdateCompleteWithLastCharged(Instant.now().minus(2, ChronoUnit.DAYS))
+
+        every { openStackService.getActiveStacks() } returns listOf(stack)
+        every { openStackService.getInstanceFromStack(any()) } returns getTestServerShutoff()
+        every { openStackService.retrieveUcloudJob(any()) } returns getTestJob()
+        every { openStackService.getStackByName(any()) } returns getStackWithFlavorName("uc-a100-1")
+
+        every { openStackService.deleteJob(any()) } returns Unit
+        every { openStackService.asyncMonitorDeletions(any()) } returns Unit
+
+        openStackService.deleteNotChargedStacks()
+
+        verify(exactly = 0) { openStackService.deleteJob(any()) }
+        verify(exactly = 0) { openStackService.asyncMonitorDeletions(any()) }
     }
 
     @Test

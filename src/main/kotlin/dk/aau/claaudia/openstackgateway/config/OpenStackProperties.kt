@@ -22,6 +22,12 @@ data class OpenStackProperties(
                        val name: String)
     data class Monitor(val timeout: Int, // Timeout in milliseconds
                        val delay: Long) // Delay between each retry in milliseconds
-
-    data class Janitor(val deleteShutoffInstanceAfterDays: Long) // The number of days a stack is left in a stopped state before deletion
+    data class Janitor(
+        val deleteShutoffInstanceAfterDays: Long, // The number of days a stack is left in a stopped state before deletion
+        val flavorLifetimes: List<FlavorShutoffLifetime>, // Special rules for specific flavors
+    )
+    data class FlavorShutoffLifetime(
+        val flavorName: String,
+        val lifetimeDays: Long,
+    )
 }
