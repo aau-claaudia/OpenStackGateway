@@ -1,6 +1,6 @@
 //[OpenStackGateway](../../index.md)/[dk.aau.claaudia.openstackgateway.interceptors](index.md)
 
-# Package dk.aau.claaudia.openstackgateway.interceptors
+# Package-level declarations
 
 ## Types
 

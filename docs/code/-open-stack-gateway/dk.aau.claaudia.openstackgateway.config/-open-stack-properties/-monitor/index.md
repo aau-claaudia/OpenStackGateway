@@ -3,7 +3,13 @@
 # Monitor
 
 [jvm]\
-data class [Monitor](index.md)(timeout: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html), delay: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html))
+data class [Monitor](index.md)(val timeout: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html), val delay: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html))
+
+## Constructors
+
+| | |
+|---|---|
+| [Monitor](-monitor.md) | [jvm]<br>constructor(timeout: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html), delay: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html)) |
 
 ## Properties
 

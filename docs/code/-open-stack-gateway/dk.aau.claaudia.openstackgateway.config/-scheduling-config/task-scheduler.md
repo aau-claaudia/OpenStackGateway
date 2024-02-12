@@ -4,7 +4,7 @@
 
 [jvm]\
 
-@Qualifier(value = "taskscheduler")
+@Qualifier(value = &quot;taskscheduler&quot;)
 
 @Bean
 

@@ -13,7 +13,7 @@ Allow extension functions to use config
 
 | | |
 |---|---|
-| [ExtensionConfig](-extension-config.md) | [jvm]<br>fun [ExtensionConfig](-extension-config.md)(openStackProperties: [OpenStackProperties](../../dk.aau.claaudia.openstackgateway.config/-open-stack-properties/index.md)) |
+| [ExtensionConfig](-extension-config.md) | [jvm]<br>constructor(openStackProperties: [OpenStackProperties](../../dk.aau.claaudia.openstackgateway.config/-open-stack-properties/index.md)) |
 
 ## Properties
 

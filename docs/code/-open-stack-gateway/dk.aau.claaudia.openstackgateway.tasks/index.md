@@ -1,6 +1,6 @@
 //[OpenStackGateway](../../index.md)/[dk.aau.claaudia.openstackgateway.tasks](index.md)
 
-# Package dk.aau.claaudia.openstackgateway.tasks
+# Package-level declarations
 
 ## Types
 

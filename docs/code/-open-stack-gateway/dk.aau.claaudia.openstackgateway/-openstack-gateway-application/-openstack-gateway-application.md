@@ -3,4 +3,4 @@
 # OpenstackGatewayApplication
 
 [jvm]\
-fun [OpenstackGatewayApplication](-openstack-gateway-application.md)()
+constructor()

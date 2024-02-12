@@ -3,7 +3,7 @@
 # updateStackLastCharged
 
 [jvm]\
-fun [updateStackLastCharged](update-stack-last-charged.md)(listStack: Stack, chargedAt: [Instant](https://docs.oracle.com/javase/8/docs/api/java/time/Instant.html))
+fun [updateStackLastCharged](update-stack-last-charged.md)(listStack: Stack, chargedAt: [Instant](https://docs.oracle.com/javase/8/docs/api/java/time/Instant.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html)
 
 Update the lastCharged timestamp on a stack
 

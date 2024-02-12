@@ -3,4 +3,4 @@
 # HomeController
 
 [jvm]\
-fun [HomeController](-home-controller.md)(client: UCloudClient, openstackService: [OpenStackService](../../dk.aau.claaudia.openstackgateway.services/-open-stack-service/index.md))
+constructor()

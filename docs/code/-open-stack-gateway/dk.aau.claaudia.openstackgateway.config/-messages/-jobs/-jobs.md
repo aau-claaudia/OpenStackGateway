@@ -3,4 +3,4 @@
 # Jobs
 
 [jvm]\
-fun [Jobs](-jobs.md)(createComplete: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), createFailed: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html))
+constructor(createComplete: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), createFailed: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), instanceShutdown: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), instanceRestarted: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), creditDeficit: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html))

@@ -5,14 +5,14 @@
 [jvm]\
 object [Companion](index.md) : Loggable
 
-## Functions
-
-| Name | Summary |
-|---|---|
-| [logger](index.md#-170179809%2FFunctions%2F-1216412040) | [jvm]<br>open fun [logger](index.md#-170179809%2FFunctions%2F-1216412040)(): Logger |
-
 ## Properties
 
 | Name | Summary |
 |---|---|
 | [log](log.md) | [jvm]<br>open override val [log](log.md): Logger |
+
+## Functions
+
+| Name | Summary |
+|---|---|
+| [logger](index.md#-170179809%2FFunctions%2F-1216412040) | [jvm]<br>open fun [logger](index.md#-170179809%2FFunctions%2F-1216412040)(): Logger |

@@ -3,7 +3,13 @@
 # Image
 
 [jvm]\
-data class [Image](index.md)(openstackId: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), openstackName: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), ucloudName: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), ucloudVersion: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html))
+data class [Image](index.md)(val openstackId: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), val openstackName: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), val ucloudName: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), val ucloudVersion: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html))
+
+## Constructors
+
+| | |
+|---|---|
+| [Image](-image.md) | [jvm]<br>constructor(openstackId: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), openstackName: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), ucloudName: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), ucloudVersion: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)) |
 
 ## Properties
 

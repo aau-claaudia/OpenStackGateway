@@ -5,7 +5,7 @@
 [jvm]\
 @Service
 
-class [TemplateService](index.md)(@Qualifier(value = "YAMLMapper")mapper: ObjectMapper)
+class [TemplateService](index.md)(@Qualifier(value = &quot;YAMLMapper&quot;)mapper: ObjectMapper)
 
 This class contains utility functions for loading and verification of heat templates
 
@@ -13,13 +13,19 @@ This class contains utility functions for loading and verification of heat templ
 
 | | |
 |---|---|
-| [TemplateService](-template-service.md) | [jvm]<br>fun [TemplateService](-template-service.md)(@Qualifier(value = "YAMLMapper")mapper: ObjectMapper) |
+| [TemplateService](-template-service.md) | [jvm]<br>constructor(@Qualifier(value = &quot;YAMLMapper&quot;)mapper: ObjectMapper) |
 
 ## Types
 
 | Name | Summary |
 |---|---|
 | [Companion](-companion/index.md) | [jvm]<br>object [Companion](-companion/index.md) |
+
+## Properties
+
+| Name | Summary |
+|---|---|
+| [templates](templates.md) | [jvm]<br>val [templates](templates.md): [Map](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html)&lt;[String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)&gt; |
 
 ## Functions
 
@@ -30,9 +36,3 @@ This class contains utility functions for loading and verification of heat templ
 | [getTemplate](get-template.md) | [jvm]<br>fun [getTemplate](get-template.md)(name: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)): Template |
 | [getTestTemplate](get-test-template.md) | [jvm]<br>fun [getTestTemplate](get-test-template.md)(): Template |
 | [validateTemplate](validate-template.md) | [jvm]<br>fun [validateTemplate](validate-template.md)(template: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html) |
-
-## Properties
-
-| Name | Summary |
-|---|---|
-| [templates](templates.md) | [jvm]<br>val [templates](templates.md): [Map](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html)&lt;[String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)&gt; |

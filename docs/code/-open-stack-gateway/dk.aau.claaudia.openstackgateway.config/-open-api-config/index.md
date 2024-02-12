@@ -7,6 +7,12 @@
 
 class [OpenApiConfig](index.md)
 
+## Constructors
+
+| | |
+|---|---|
+| [OpenApiConfig](-open-api-config.md) | [jvm]<br>constructor() |
+
 ## Functions
 
 | Name | Summary |

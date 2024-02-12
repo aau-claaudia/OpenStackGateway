@@ -5,7 +5,7 @@
 [jvm]\
 @RestController
 
-class [HomeController](index.md)(client: UCloudClient, openstackService: [OpenStackService](../../dk.aau.claaudia.openstackgateway.services/-open-stack-service/index.md))
+class [HomeController](index.md)
 
 This controller contains an endpoint to redirect from the base url to the swagger ui
 
@@ -13,11 +13,16 @@ This controller contains an endpoint to redirect from the base url to the swagge
 
 | | |
 |---|---|
-| [HomeController](-home-controller.md) | [jvm]<br>fun [HomeController](-home-controller.md)(client: UCloudClient, openstackService: [OpenStackService](../../dk.aau.claaudia.openstackgateway.services/-open-stack-service/index.md)) |
+| [HomeController](-home-controller.md) | [jvm]<br>constructor() |
+
+## Types
+
+| Name | Summary |
+|---|---|
+| [Companion](-companion/index.md) | [jvm]<br>object [Companion](-companion/index.md) |
 
 ## Functions
 
 | Name | Summary |
 |---|---|
-| [chargedTest](charged-test.md) | [jvm]<br>@GetMapping(value = ["/charge"])<br>fun [chargedTest](charged-test.md)(): [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)<br>THIS IS JUST FOR TESTING |
-| [index](--index--.md) | [jvm]<br>@GetMapping(value = ["/"])<br>fun [index](--index--.md)(): RedirectView?<br>Redirect to swagger interface |
+| [index](--index--.md) | [jvm]<br>@GetMapping(value = [&quot;/&quot;])<br>fun [index](--index--.md)(): RedirectView?<br>Redirect to swagger interface |

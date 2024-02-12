@@ -5,9 +5,15 @@
 [jvm]\
 @Configuration
 
-@Profile(value = ["prod", "test", "dev", "local"])
+@Profile(value = [&quot;prod&quot;, &quot;test&quot;, &quot;dev&quot;])
 
 class [UCloudSpringConfigTest](index.md)(interceptor: UCloudAuthInterceptor, requestInterceptor: [UcloudRequestInterceptor](../../dk.aau.claaudia.openstackgateway.interceptors/-ucloud-request-interceptor/index.md)) : WebMvcConfigurer
+
+## Constructors
+
+| | |
+|---|---|
+| [UCloudSpringConfigTest](-u-cloud-spring-config-test.md) | [jvm]<br>constructor(interceptor: UCloudAuthInterceptor, requestInterceptor: [UcloudRequestInterceptor](../../dk.aau.claaudia.openstackgateway.interceptors/-ucloud-request-interceptor/index.md)) |
 
 ## Functions
 

@@ -3,4 +3,4 @@
 # Endpoints
 
 [jvm]\
-fun [Endpoints](-endpoints.md)(auth: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html))
+constructor(auth: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html))

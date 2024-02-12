@@ -3,7 +3,13 @@
 # Endpoints
 
 [jvm]\
-data class [Endpoints](index.md)(auth: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html))
+data class [Endpoints](index.md)(val auth: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html))
+
+## Constructors
+
+| | |
+|---|---|
+| [Endpoints](-endpoints.md) | [jvm]<br>constructor(auth: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)) |
 
 ## Properties
 

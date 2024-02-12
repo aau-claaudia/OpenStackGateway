@@ -3,4 +3,4 @@
 # UCloudSpringConfigTest
 
 [jvm]\
-fun [UCloudSpringConfigTest](-u-cloud-spring-config-test.md)(interceptor: UCloudAuthInterceptor, requestInterceptor: [UcloudRequestInterceptor](../../dk.aau.claaudia.openstackgateway.interceptors/-ucloud-request-interceptor/index.md))
+constructor(interceptor: UCloudAuthInterceptor, requestInterceptor: [UcloudRequestInterceptor](../../dk.aau.claaudia.openstackgateway.interceptors/-ucloud-request-interceptor/index.md))

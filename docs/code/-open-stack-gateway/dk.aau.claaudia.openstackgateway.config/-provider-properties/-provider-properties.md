@@ -3,4 +3,4 @@
 # ProviderProperties
 
 [jvm]\
-fun [ProviderProperties](-provider-properties.md)(id: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), products: [List](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html)&lt;[ProviderProperties.Product](-product/index.md)&gt;, images: [List](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html)&lt;[ProviderProperties.Image](-image/index.md)&gt;)
+constructor(id: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), defaultProductCategory: [String](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html), images: [List](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html)&lt;[ProviderProperties.Image](-image/index.md)&gt;)

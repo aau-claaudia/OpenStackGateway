@@ -4,3 +4,5 @@
 
 [jvm]\
 fun [asyncChargeDeleteJob](async-charge-delete-job.md)(job: Job)
+
+Charge a job before deleting it. FIXME Maybe add logic to disallow deletion if charging is unsuccessful.

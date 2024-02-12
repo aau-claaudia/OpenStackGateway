@@ -3,4 +3,4 @@
 # Jobs
 
 [jvm]\
-fun [Jobs](-jobs.md)(openStackService: [OpenStackService](../../dk.aau.claaudia.openstackgateway.services/-open-stack-service/index.md))
+constructor(openStackService: [OpenStackService](../../dk.aau.claaudia.openstackgateway.services/-open-stack-service/index.md))

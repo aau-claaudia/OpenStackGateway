@@ -7,6 +7,12 @@
 
 class [UCloudClientConfig](index.md)
 
+## Constructors
+
+| | |
+|---|---|
+| [UCloudClientConfig](-u-cloud-client-config.md) | [jvm]<br>constructor() |
+
 ## Functions
 
 | Name | Summary |
