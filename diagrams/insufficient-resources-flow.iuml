@@ -1,0 +1,12 @@
+@startuml
+!theme cerulean-outline
+(*) --> "Create stack"
+"Create stack"--> "Stack running"
+"Stack running" -down-> "Charge"
+"Charge" -left-> [Success]"Stack running"
+"Charge" --> [Insufficient resources]"Stack shutoff"
+"Stack shutoff" --> "Max lifetime reached?"
+"Max lifetime reached?" -left-> [No]"Charge"
+"Max lifetime reached?" --> [Yes]"Delete stack"
+"Delete stack" --> (*)
+@enduml
