@@ -507,10 +507,17 @@ class OpenStackService(
      * A shortcut function for sending job failed update message
      */
     fun sendJobFailedMessage(jobId: String, message: String) {
+        // Try to identify lack of resources and change message
+        val jobMessage: String = if ("failed to get volume" in message.lowercase()) {
+            "Unfortunately all available resources have been allocated for the product type you have selected. " +
+                "The options available are to use an alternative machine size or product, or to try again later."
+        } else {
+            message
+        }
         sendJobStatusMessage(
             jobId,
             JobState.FAILURE,
-            MessageFormat.format(messages.jobs.createFailed, message)
+            MessageFormat.format(messages.jobs.createFailed, jobMessage)
         )
     }
 

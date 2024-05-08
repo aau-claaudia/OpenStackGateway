@@ -43,7 +43,7 @@ to test the provider API.
 
 For the manual insertion endpoint there is an example [here](src/test/resources/requests/temp-job-request-example.json).
 
-## Athentication and Authorization
+## Authentication and Authorization
 
 UCloud and the provider
 This is handled by UClouds provider integration module: [Jvm-Provider-Support](https://github.com/SDU-eScience/UCloud/tree/master/backend/jvm-provider-support)
