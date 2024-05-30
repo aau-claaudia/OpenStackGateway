@@ -491,7 +491,7 @@ class OpenStackService(
                 return
             }
             if (stack != null && stack.status == StackStatus.CREATE_FAILED.name) {
-                logger.error("Stack create failed status: ${stack.status} stackId: ${stack.id} stackName: ${stack.name}")
+                logger.error("Stack create failed status: ${stack.status} stackId: ${stack.id} stackName: ${stack.name} Reason: ${stack.stackStatusReason}")
                 sendJobFailedMessage(job.id, "Job failed. Reason: ${stack.stackStatusReason}")
                 return
             }
@@ -507,10 +507,22 @@ class OpenStackService(
      * A shortcut function for sending job failed update message
      */
     fun sendJobFailedMessage(jobId: String, message: String) {
+        // Try to identify lack of resources and change to user-friendly message
+        val resourceErrorMsgs = listOf(
+            "failed to get volume",
+            "no valid host was found"
+        )
+        val jobMessage: String = if (resourceErrorMsgs.any { it in message.lowercase() }) {
+            "Unfortunately all available resources have been allocated for the product type you have selected. " +
+                "The options available are to use an alternative machine size or product, or to try again later."
+        } else {
+            message
+        }
+
         sendJobStatusMessage(
             jobId,
             JobState.FAILURE,
-            MessageFormat.format(messages.jobs.createFailed, message)
+            MessageFormat.format(messages.jobs.createFailed, jobMessage)
         )
     }
 
