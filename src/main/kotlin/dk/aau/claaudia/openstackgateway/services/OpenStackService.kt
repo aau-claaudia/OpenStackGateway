@@ -1293,7 +1293,7 @@ class OpenStackService(
                     it.flavorName == stackWithParameters.parameters["flavor"]
                 }
                 val maxLifetime = flavorLifetime?.lifetimeDays ?: config.janitor.deleteShutoffInstanceAfterDays
-
+                logger.info("Stack with shutoff instance found ${activeStack.id} $lastCharged, $isShutoff, time since last charge in hours: ${sinceLastCharge.toHours()}")
                 if (sinceLastCharge.toDays() >= maxLifetime) {
                     val job: Job? = retrieveUcloudJob(activeStack.ucloudId)
 
@@ -1302,7 +1302,7 @@ class OpenStackService(
                         return
                     }
 
-                    logger.info("Deleting stack with shutoff instance ${activeStack.id} $lastCharged, $isShutoff ${sinceLastCharge.toDays()}")
+                    logger.info("Deleting stack with shutoff instance ${activeStack.id} $lastCharged, $isShutoff, time since last charge in days: ${sinceLastCharge.toDays()}")
                     deleteJob(job)
                     asyncMonitorDeletions(listOf(job))
                 }
