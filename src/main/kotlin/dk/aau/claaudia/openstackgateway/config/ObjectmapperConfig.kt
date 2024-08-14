@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
 
@@ -23,7 +24,9 @@ class ObjectmapperConfig {
     @Bean(name = ["YAMLMapper"])
     fun yamlObjectMapper(): ObjectMapper {
         val mapper = ObjectMapper(YAMLFactory())
-        mapper.registerModule(KotlinModule())
+        mapper.registerModule(
+            KotlinModule.Builder().build()
+        )
         mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
         mapper.configure(JsonParser.Feature.ALLOW_YAML_COMMENTS, true)
 

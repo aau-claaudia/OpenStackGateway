@@ -145,7 +145,7 @@ class OpenStackService(
 
     fun listFlavors(): List<Flavor?> {
         val list = getClient().compute().flavors().list(true)
-        logger.info("Getting flavors from openstack:", list.size)
+        logger.info("Getting flavors from openstack: ${list.size}")
         return list
     }
 
@@ -477,14 +477,14 @@ class OpenStackService(
         val startTime = System.currentTimeMillis()
         while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
             val stack = getStackByJob(job)
-            logger.info("Monitoring stack status", stack, stack?.status)
+            logger.info("Monitoring stack status $stack ${stack?.status}")
             if (stack != null && stack.status == StackStatus.CREATE_COMPLETE.name) {
                 logger.info("Stack CREATE complete")
                 val outputIP = stack.outputs?.find { it["output_key"] == "server_ip" }
                 if (!outputIP.isNullOrEmpty()) {
                     sendJobRunningMessage(job.id, outputIP["output_value"] as String)
                 } else {
-                    logger.error("Did not receive IP output from openstack", job, stack)
+                    logger.error("Did not receive IP output from openstack $job $stack")
                     sendJobFailedMessage(job.id, "Did not receive IP output from openstack")
                 }
 
@@ -898,9 +898,9 @@ class OpenStackService(
         val update = client.heat().stacks().update(stack.name, stack.id, stackUpdate)
 
         if (update.isSuccess) {
-            logger.info("Stack lastcharged timestamp updated", stack)
+            logger.info("Stack lastcharged timestamp updated: $stack}")
         } else {
-            logger.error("Stack lastcharged timestamp could no be updated", stack)
+            logger.error("Stack lastcharged timestamp could no be updated: $stack}")
         }
 
         return update.isSuccess
@@ -933,19 +933,19 @@ class OpenStackService(
         while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
             val instance = getInstanceFromId(server.id)
             if (instance != null && instance.status == Server.Status.SHUTOFF) {
-                logger.info("Found instance with status SHUTOFF: ", instance.id)
+                logger.info("Found instance with status SHUTOFF: ${instance.id}")
                 sendInstanceShutdownMessage(job.id, estimateProductPriceForPeriod(job, period))
                 return
             } else if (instance == null) {
-                logger.info("Instance stopping could not find instance: ", server.id)
+                logger.info("Instance stopping could not find instance: ${server.id}")
             } else {
-                logger.info("Instance stopping could not be verified. Status: ", server.status)
+                logger.info("Instance stopping could not be verified. Status: ${server.status}")
             }
             // Sleep until next retry
             logger.info("Waiting to retry")
             Thread.sleep(config.monitor.delay)
         }
-        logger.error("Instance could no be stopped. Serverid: ", server.id)
+        logger.error("Instance could no be stopped. Serverid: ${server.id}")
     }
 
     fun sendInstanceStartAction(server: Server) {
@@ -970,19 +970,19 @@ class OpenStackService(
         while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
             val instance = getInstanceFromId(server.id)
             if (instance != null && instance.status == Server.Status.ACTIVE) {
-                logger.info("Found instance with status ACTIVE: ", instance.id)
+                logger.info("Found instance with status ACTIVE: ${instance.id}")
                 sendInstanceRestartedMessage(job.id)
                 return
             } else if (instance == null) {
-                logger.info("Instance starting could not find instance: ", server.id)
+                logger.info("Instance starting could not find instance: ${server.id}")
             } else {
-                logger.info("Instance starting could not be verified. Status: ", server.status)
+                logger.info("Instance starting could not be verified. Status: ${server.status}")
             }
             // Sleep until next retry
             logger.info("Waiting to retry")
             Thread.sleep(config.monitor.delay)
         }
-        logger.error("Instance could no be started within timeout. Serverid: ", server.id)
+        logger.error("Instance could no be started within timeout. Serverid: ${server.id}")
     }
 
     fun getStackEvents(stackName: String, stackIdentity: String): MutableList<out Event>? {
@@ -1004,7 +1004,7 @@ class OpenStackService(
         threadPool.execute {
             val stack = getStackByJob(job)
             if (stack != null) {
-                logger.error("AsyncChargeDeleteJob could not delete. Job: ${job.id} Stack: ${job.openstackName}")
+                logger.info("AsyncChargeDeleteJob attempting to charge and delete job: ${job.id} Stack: ${job.openstackName}")
                 chargeStack(stack)
                 deleteJob(job)
             }
@@ -1063,19 +1063,19 @@ class OpenStackService(
         while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
             val stack = findStackIncludeDeleted(job)
             if (stack != null && stack.status == StackStatus.DELETE_COMPLETE.name) {
-                logger.info("Found stack with status delete complete: ", job.openstackName)
+                logger.info("Found stack with status delete complete: ${job.openstackName}")
                 sendJobStatusMessage(job.id, JobState.SUCCESS, "Stack DELETE complete")
                 return
             } else if (stack == null) {
-                logger.info("Stack deletion could not find stack: ", job.openstackName)
+                logger.info("Stack deletion could not find stack: ${job.openstackName}")
             } else {
-                logger.info("Stack deletion could not be verified. Status: ", stack.status)
+                logger.info("Stack deletion could not be verified. Status: ${stack.status}")
             }
             // Sleep until next retry
             logger.info("Waiting to retry")
             Thread.sleep(config.monitor.delay)
         }
-        logger.error("Job could no be deleted", job)
+        logger.error("Job could not be deleted: $job")
     }
 
     fun asyncMonitorStackSuspensions(jobs: List<Job>) {
@@ -1172,8 +1172,12 @@ class OpenStackService(
 
         when {
             expectedUcloudJobState == null -> {
-                // Unknown stack status.
-                logger.error("Unhandled status: ${stack.status}. JobID: ${job.id}. Stack: ${stack.id}")
+                if (StackStatus.valueOf(stack.status) == StackStatus.DELETE_IN_PROGRESS) {
+                    logger.info("Delete in progress, waiting to verify status: ${stack.status}. JobID: ${job.id}. Stack: ${stack.id}")
+                } else {
+                    // Unknown stack status.
+                    logger.error("Unhandled status: ${stack.status}. JobID: ${job.id}. Stack: ${stack.id}")
+                }
             }
 
             job.status.state != expectedUcloudJobState -> {

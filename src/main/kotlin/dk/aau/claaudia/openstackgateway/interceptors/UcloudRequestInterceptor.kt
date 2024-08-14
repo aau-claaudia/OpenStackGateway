@@ -2,10 +2,10 @@ package dk.aau.claaudia.openstackgateway.interceptors
 
 import dk.aau.claaudia.openstackgateway.extensions.getLogger
 import org.springframework.stereotype.Component
+import org.springframework.web.servlet.HandlerInterceptor
 import org.springframework.web.util.ContentCachingRequestWrapper
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
-import org.springframework.web.servlet.HandlerInterceptor
 
 @Component
 class UcloudRequestInterceptor : HandlerInterceptor {
