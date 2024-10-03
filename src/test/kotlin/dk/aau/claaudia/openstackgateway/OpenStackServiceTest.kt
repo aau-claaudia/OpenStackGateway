@@ -413,6 +413,8 @@ class OpenStackServiceTest(
         )
 
         openStackService.monitorDeletion(job)
+
+        verify(inverse = true) { openStackService.sendJobStatusMessage(job.id, any(), any()) }
     }
 
     @Test

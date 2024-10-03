@@ -1112,7 +1112,8 @@ class OpenStackService(
             Thread.sleep(config.monitor.delay)
         }
         logger.error("Job: ${job.openstackName} Job could not be deleted: $job")
-        sendJobFailedMessage(job.id, "Job deletion failed. Please try again later.")
+        // TODO: should we send a status in this case and what should the wording be
+        //sendJobFailedMessage(job.id, "Job deletion failed. Please try again later.")
     }
 
     fun asyncMonitorStackSuspensions(jobs: List<Job>) {
