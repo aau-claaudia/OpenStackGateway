@@ -483,13 +483,13 @@ class OpenStackService(
             try {
                 stack = getStackByJob(job)
             } catch (e: ConnectionException) {
-                logger.error("Job: ${job.openstackName}: Connection timeout occurred: ${e.message}")
+                logger.error("Job: ${job.openstackName}: Connection timeout occurred when monitoring job creation: ${e.message}")
             } catch (e: ResponseException) {
-                logger.error("Job: ${job.openstackName}: Read timeout occurred: ${e.message}")
+                logger.error("Job: ${job.openstackName}: Read timeout occurred when monitoring job creation: ${e.message}")
             } catch (e: ServerResponseException) {
-                logger.error("Job: ${job.openstackName}: Server responded with an error: ${e.message}")
+                logger.error("Job: ${job.openstackName}: Server responded with an error when monitoring job creation: ${e.message}")
             } catch (e: Exception) {
-                logger.error("Job: ${job.openstackName}: An unexpected error occurred: ${e.message}")
+                logger.error("Job: ${job.openstackName}: An unexpected error occurred when monitoring job creation: ${e.message}")
             }
             logger.info("Job: ${job.openstackName}: Monitoring stack status $stack ${stack?.status}")
             if (stack != null && stack.status == StackStatus.CREATE_COMPLETE.name) {
@@ -1034,14 +1034,18 @@ class OpenStackService(
      * then send delete request with id and name from job
      */
     fun deleteJob(job: Job) {
-        // TODO: clean up this method after test
-        logger.info("Job: ${job.openstackName} In delete method.")
         val client = getClient()
         var stackByName: Stack? = getStackByJob(job)
         try {
             stackByName = getStackByJob(job)
+        } catch (e: ConnectionException) {
+            logger.error("Job: ${job.openstackName}: Connection timeout occurred when trying to delete job: ${e.message}")
+        } catch (e: ResponseException) {
+            logger.error("Job: ${job.openstackName}: Read timeout occurred when trying to delete job: ${e.message}")
+        } catch (e: ServerResponseException) {
+            logger.error("Job: ${job.openstackName}: Server responded with an error when trying to delete job: ${e.message}")
         } catch (e: Exception) {
-            logger.info("Job: ${job.openstackName} Exception when getting stack, message: ${e.message}")
+            logger.error("Job: ${job.openstackName}: An unexpected error occurred when trying to delete job: ${e.message}")
         }
         if (stackByName != null) {
             logger.info("Job: ${job.openstackName} Deleting stack: ${stackByName.name}")
@@ -1082,7 +1086,18 @@ class OpenStackService(
     fun monitorDeletion(job: Job) {
         val startTime = System.currentTimeMillis()
         while (startTime + config.monitor.timeout > System.currentTimeMillis()) {
-            val stack = findStackIncludeDeleted(job)
+            var stack: Stack? = null
+            try {
+                stack = findStackIncludeDeleted(job)
+            } catch (e: ConnectionException) {
+                logger.error("Job: ${job.openstackName}: Connection timeout occurred when monitoring deletion: ${e.message}")
+            } catch (e: ResponseException) {
+                logger.error("Job: ${job.openstackName}: Read timeout occurred when monitoring deletion: ${e.message}")
+            } catch (e: ServerResponseException) {
+                logger.error("Job: ${job.openstackName}: Server responded with an error when monitoring deletion: ${e.message}")
+            } catch (e: Exception) {
+                logger.error("Job: ${job.openstackName}: An unexpected error occurred when monitoring deletion: ${e.message}")
+            }
             if (stack != null && stack.status == StackStatus.DELETE_COMPLETE.name) {
                 logger.info("Job: ${job.openstackName} Found stack with status delete complete: ${job.openstackName}")
                 sendJobStatusMessage(job.id, JobState.SUCCESS, "Stack DELETE complete")
@@ -1097,6 +1112,7 @@ class OpenStackService(
             Thread.sleep(config.monitor.delay)
         }
         logger.error("Job: ${job.openstackName} Job could not be deleted: $job")
+        sendJobFailedMessage(job.id, "Job deletion failed. Please try again later.")
     }
 
     fun asyncMonitorStackSuspensions(jobs: List<Job>) {
