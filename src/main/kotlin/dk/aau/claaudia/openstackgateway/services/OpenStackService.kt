@@ -1034,9 +1034,15 @@ class OpenStackService(
      * then send delete request with id and name from job
      */
     fun deleteJob(job: Job) {
+        // TODO: clean up this method after test
+        logger.info("Job: ${job.openstackName} In delete method.")
         val client = getClient()
-
-        val stackByName = getStackByJob(job)
+        var stackByName: Stack? = getStackByJob(job)
+        try {
+            stackByName = getStackByJob(job)
+        } catch (e: Exception) {
+            logger.info("Job: ${job.openstackName} Exception when getting stack, message: ${e.message}")
+        }
         if (stackByName != null) {
             logger.info("Job: ${job.openstackName} Deleting stack: ${stackByName.name}")
             val delete = client.heat().stacks().delete(stackByName.name, stackByName.id)
